@@ -15,6 +15,10 @@ lancer quelques commandes. Compte environ une demi-journée, plus les délais de
 
 ## 1. Supabase (le serveur)
 
+> **Raccourci** : après avoir créé le projet (étape 1 ci-dessous), `bash scripts/setup-cloud.sh`
+> fait les étapes 2 à 4 et 6, écrit le `.env` et, si tu veux, configure Expo.
+> Guide pas à pas : [docs/CLOUD.md](CLOUD.md).
+
 1. Crée un projet sur supabase.com. **Choisis une région dans l'Union européenne** (par exemple
    Paris `eu-west-3`) : la politique de confidentialité l'annonce, et c'est préférable pour le RGPD.
 2. Installe la CLI et relie le dépôt au projet :
@@ -28,7 +32,7 @@ lancer quelques commandes. Compte environ une demi-journée, plus les délais de
    ```
 4. Déploie la fonction serveur (comptes enfants, suppression de compte) :
    ```bash
-   npx supabase functions deploy family --no-verify-jwt
+   npx supabase functions deploy family --no-verify-jwt --use-api
    ```
    (`--no-verify-jwt` est normal : la fonction vérifie elle-même l'identité de l'appelant.)
 5. Dans le tableau de bord Supabase, **Authentication** :
@@ -50,7 +54,7 @@ npx expo start           # l'app passe automatiquement en mode « cloud »
 Sans `.env`, l'app reste en **mode local** (tout sur l'appareil) : pratique pour développer.
 
 Pour les builds EAS, déclare les deux mêmes variables dans le projet Expo
-(`npx eas-cli@latest env:create` ou expo.dev › Project › Environment variables), pour les
+(`npx eas-cli@latest env:set` ou expo.dev › Project › Environment variables), pour les
 environnements `preview` et `production`.
 
 ## 3. Compiler et tester sur de vrais téléphones

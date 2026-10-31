@@ -32,14 +32,32 @@ function json(status: number, body: unknown) {
 }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+/**
+ * Clé d'administration. Les projets récents utilisent des clés « sb_secret_… »
+ * (variable SUPABASE_SECRET_KEYS), les plus anciens une clé JWT « service_role ».
+ */
+function serviceKey(): string {
+  let fromMap: string | undefined;
+  try {
+    fromMap = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}').default;
+  } catch {
+    fromMap = undefined;
+  }
+  const key = Deno.env.get('FOCUS_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? fromMap ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!key) throw new Error('Clé de service introuvable.');
+  return key;
+}
+const SERVICE_KEY = serviceKey();
+/** Une clé « sb_secret_… » n'est pas un JWT : elle va seulement dans l'en-tête apikey. */
+const SERVICE_IS_JWT = SERVICE_KEY.startsWith('eyJ');
 
 async function call(path: string, init: { method?: string; body?: unknown; token?: string; prefer?: string } = {}) {
   const res = await fetch(`${SUPABASE_URL}${path}`, {
     method: init.method ?? 'GET',
     headers: {
       apikey: SERVICE_KEY,
-      Authorization: `Bearer ${init.token ?? SERVICE_KEY}`,
+      ...(init.token ? { Authorization: `Bearer ${init.token}` } : SERVICE_IS_JWT ? { Authorization: `Bearer ${SERVICE_KEY}` } : {}),
       'Content-Type': 'application/json',
       ...(init.prefer ? { Prefer: init.prefer } : {}),
     },

@@ -70,7 +70,8 @@ La CI GitHub Actions (`.github/workflows/ci.yml`) lance tout cela à chaque push
 
 ## Publier
 
-Tout est décrit pas à pas dans **[docs/MISE_EN_PRODUCTION.md](docs/MISE_EN_PRODUCTION.md)**
+Mettre en place le cloud : **[docs/CLOUD.md](docs/CLOUD.md)** (script `scripts/setup-cloud.sh`).
+Tout le reste est décrit pas à pas dans **[docs/MISE_EN_PRODUCTION.md](docs/MISE_EN_PRODUCTION.md)**
 (projet Supabase, builds EAS, fiches des stores, points RGPD / enfants).
 Politique de confidentialité : [docs/CONFIDENTIALITE.md](docs/CONFIDENTIALITE.md).
 
