@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NotificationRouter } from '@/components/NotificationRouter';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DataProvider } from '@/lib/data';
 import { TimerProvider } from '@/lib/timer';
@@ -51,6 +52,7 @@ export default function RootLayout() {
           <TimerProvider>
             <StatusBar style="auto" />
             <RootNavigator />
+            <NotificationRouter />
           </TimerProvider>
         </DataProvider>
       </AuthProvider>

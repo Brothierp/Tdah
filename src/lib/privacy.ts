@@ -17,7 +17,7 @@ export const PRIVACY_SECTIONS: { title: string; body: string }[] = [
     title: 'Quelles données ?',
     body:
       'Uniquement ce qui est nécessaire au fonctionnement : prénom, avatar, tranche d’âge (Enfant / Ado / Adulte), ' +
-      'e-mail (comptes adultes et ados) ou identifiant (comptes enfants), mot de passe (stocké chiffré, jamais lisible), ' +
+      'e-mail (comptes adultes et ados) ou identifiant (comptes enfants), mot de passe (jamais stocké en clair : seule une empreinte est conservée), ' +
       'tes tâches, étapes, rappels et réglages. Pas de géolocalisation, pas de contacts, pas de photos, pas de publicité, ' +
       'pas de traceurs ni d’outils de mesure d’audience.',
   },

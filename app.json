@@ -8,17 +8,27 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.brothier.focustdah"
+      "bundleIdentifier": "com.brothier.focustdah",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6C5CE7",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.brothier.focustdah"
+      "package": "com.brothier.focustdah",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -29,10 +39,25 @@
       [
         "expo-notifications",
         {
-          "color": "#6C5CE7"
+          "color": "#6C5CE7",
+          "icon": "./assets/android-icon-monochrome.png"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F5FF",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#14121F"
+          }
         }
       ]
     ],
-    "scheme": "focustdah"
+    "scheme": "focustdah",
+    "description": "To-do list, timer et rappels pour les personnes TDAH — enfants, ados et adultes, avec espace parents."
   }
 }
