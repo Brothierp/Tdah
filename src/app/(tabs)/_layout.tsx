@@ -26,14 +26,16 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Tâches', tabBarIcon: ({ focused }) => <TabIcon emoji="✅" focused={focused} /> }}
+        options={{ title: 'Aujourd’hui', tabBarIcon: ({ focused }) => <TabIcon emoji="✅" focused={focused} /> }}
       />
       <Tabs.Screen
         name="timer"
         options={{
           title: 'Timer',
           tabBarIcon: ({ focused }) => <TabIcon emoji="⏳" focused={focused} />,
-          tabBarBadge: timerActive ? '●' : undefined,
+          // Petit point discret quand un timer tourne.
+          tabBarBadge: timerActive ? '' : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primary, minWidth: 12, maxHeight: 12, borderRadius: 6, top: 2 },
         }}
       />
       <Tabs.Screen

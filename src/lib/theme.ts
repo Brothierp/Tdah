@@ -31,28 +31,72 @@ const dark: typeof light = {
   border: '#36324D',
 };
 
+/** Mode calme : couleurs moins saturées, contrastes doux (confort sensoriel, TSA). */
+const calmLight: typeof light = {
+  background: '#F5F4F0',
+  card: '#FFFFFF',
+  text: '#2B2A33',
+  textMuted: '#6E6D78',
+  primary: '#56679A',
+  primaryText: '#FFFFFF',
+  primarySoft: '#E5E8F1',
+  success: '#4F8F74',
+  successSoft: '#E1EEE7',
+  warning: '#D9B66A',
+  danger: '#B5524F',
+  border: '#E2E0DA',
+};
+
+const calmDark: typeof light = {
+  background: '#1A1A1E',
+  card: '#25252B',
+  text: '#ECEBE6',
+  textMuted: '#A7A6AE',
+  primary: '#9AA8D6',
+  primaryText: '#1A1A1E',
+  primarySoft: '#33384A',
+  success: '#7DBB9F',
+  successSoft: '#24352D',
+  warning: '#D9B66A',
+  danger: '#E08B88',
+  border: '#3A3A42',
+};
+
 export type Colors = typeof light;
 
 export interface Theme {
   colors: Colors;
-  /** Multiplicateur de taille de texte : plus grand pour les enfants. */
+  /** Multiplicateur de taille de texte : âge × réglage « taille du texte ». */
   fontScale: number;
   /** Rayon des coins : plus arrondi pour les enfants. */
   radius: number;
   /** Afficher plus d'emojis et d'encouragements. */
   playful: boolean;
+  /** Pas d'animations ni de confettis (mode calme ou réglage du téléphone). */
+  reduceMotion: boolean;
 }
 
-export function useTheme(ageGroup: AgeGroup = 'adulte'): Theme {
+export interface ComfortOptions {
+  textSize?: 'normal' | 'grand' | 'tres-grand';
+  calmMode?: boolean;
+  systemReduceMotion?: boolean;
+}
+
+const TEXT_SCALE = { normal: 1, grand: 1.2, 'tres-grand': 1.4 } as const;
+
+export function useTheme(ageGroup: AgeGroup = 'adulte', comfort: ComfortOptions = {}): Theme {
   const scheme = useColorScheme();
-  const colors = scheme === 'dark' ? dark : light;
+  const calm = !!comfort.calmMode;
+  const colors = scheme === 'dark' ? (calm ? calmDark : dark) : calm ? calmLight : light;
+  const text = TEXT_SCALE[comfort.textSize ?? 'normal'];
+  const reduceMotion = calm || !!comfort.systemReduceMotion;
   switch (ageGroup) {
     case 'enfant':
-      return { colors, fontScale: 1.15, radius: 22, playful: true };
+      return { colors, fontScale: 1.15 * text, radius: 22, playful: true, reduceMotion };
     case 'ado':
-      return { colors, fontScale: 1.05, radius: 18, playful: true };
+      return { colors, fontScale: 1.05 * text, radius: 18, playful: true, reduceMotion };
     default:
-      return { colors, fontScale: 1, radius: 14, playful: false };
+      return { colors, fontScale: text, radius: 14, playful: false, reduceMotion };
   }
 }
 

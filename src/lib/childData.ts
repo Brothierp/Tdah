@@ -12,6 +12,7 @@ export interface ChildData {
   tasks: Task[];
   settings: Settings;
   addTask: (input: TaskInput) => Promise<Task>;
+  addTasks: (inputs: TaskInput[]) => Promise<void>;
   updateTask: (id: string, input: TaskInput) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   reload: () => Promise<void>;
@@ -74,6 +75,11 @@ export function useChildData(childId: string | null): ChildData {
     [save, user?.id],
   );
 
+  const addTasks = useCallback(
+    (inputs: TaskInput[]) => save([...tasksRef.current, ...inputs.map((i) => createTask(i, user?.id ?? null))]),
+    [save, user?.id],
+  );
+
   const updateTask = useCallback(
     (id: string, input: TaskInput) => save(updateTaskIn(tasksRef.current, id, input)),
     [save],
@@ -81,5 +87,5 @@ export function useChildData(childId: string | null): ChildData {
 
   const deleteTask = useCallback((id: string) => save(deleteTaskIn(tasksRef.current, id)), [save]);
 
-  return { child, ready, tasks, settings, addTask, updateTask, deleteTask, reload };
+  return { child, ready, tasks, settings, addTask, addTasks, updateTask, deleteTask, reload };
 }

@@ -6,7 +6,7 @@ import type { Step, Task } from './types';
  * Partagées entre le compte connecté (data.tsx) et l'espace parents (childData.ts).
  */
 
-export type TaskInput = Pick<Task, 'title' | 'emoji' | 'durationMin' | 'reminder'> & { steps: string[] };
+export type TaskInput = Pick<Task, 'title' | 'emoji' | 'durationMin' | 'reminder' | 'moment'> & { steps: string[] };
 
 function isToday(iso: string | null) {
   return iso != null && new Date(iso).toDateString() === new Date().toDateString();
@@ -82,12 +82,13 @@ export function clearDoneIn(tasks: Task[]): Task[] {
   return tasks.filter((t) => !t.done || t.reminder.repeat === 'daily');
 }
 
-/** Échange avec la tâche voisine visible dans la même liste (à faire / faites). */
+/** Échange avec la tâche voisine visible dans le même groupe (même moment, à faire / faites). */
 export function moveTaskIn(tasks: Task[], id: string, direction: -1 | 1): Task[] {
   const index = tasks.findIndex((t) => t.id === id);
   if (index < 0) return tasks;
+  const sameGroup = (t: Task) => t.done === tasks[index].done && (t.moment ?? null) === (tasks[index].moment ?? null);
   let target = index + direction;
-  while (target >= 0 && target < tasks.length && tasks[target].done !== tasks[index].done) target += direction;
+  while (target >= 0 && target < tasks.length && !sameGroup(tasks[target])) target += direction;
   if (target < 0 || target >= tasks.length) return tasks;
   const next = [...tasks];
   [next[index], next[target]] = [next[target], next[index]];
@@ -113,4 +114,11 @@ export function diffTasks(prev: Task[], next: Task[]): { upserts: { task: Task; 
   const nextIds = new Set(next.map((t) => t.id));
   const deletes = prev.filter((t) => !nextIds.has(t.id)).map((t) => t.id);
   return { upserts, deletes };
+}
+
+/** « Plus tard » : la tâche passe après les autres tâches de son moment. */
+export function postponeTaskIn(tasks: Task[], id: string): Task[] {
+  const task = tasks.find((t) => t.id === id);
+  if (!task) return tasks;
+  return [...tasks.filter((t) => t.id !== id), task];
 }

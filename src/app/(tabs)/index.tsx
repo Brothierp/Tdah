@@ -1,150 +1,208 @@
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Redirect, router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFeedback } from '@/components/Feedback';
+import { FocusCard } from '@/components/FocusCard';
+import { RewardBar } from '@/components/RewardBar';
 import { TaskItem } from '@/components/TaskItem';
-import { Button, Card, Screen, Txt } from '@/components/ui';
+import { Button, Card, Screen, Segmented, Txt } from '@/components/ui';
+import { useTaskActions } from '@/components/useTaskActions';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
-import { randomCheer } from '@/lib/theme';
+import { currentMoment, groupByMoment, momentLabel, upcomingTasks } from '@/lib/moments';
 import { formatDuration, useTimer } from '@/lib/timer';
-import type { Task } from '@/lib/types';
 import { useAppTheme } from '@/lib/useAppTheme';
 
 function todayLabel() {
   return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-export default function TasksScreen() {
+export default function TodayScreen() {
   const { user } = useAuth();
-  const { tasks, toggleTask, clearDone, settings, refresh } = useData();
+  const { ready, tasks, settings, updateSettings, clearDone, refresh } = useData();
   const timer = useTimer();
-  const { colors, radius, playful } = useAppTheme();
+  const { colors, radius } = useAppTheme();
+  const { toggle } = useTaskActions();
   const [showDone, setShowDone] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [toastOpacity] = useState(() => new Animated.Value(0));
-
-  const todo = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
-  const progress = tasks.length ? done.length / tasks.length : 0;
-
-  useEffect(() => {
-    if (!toast) return;
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: Platform.OS !== 'web' }),
-      Animated.delay(1400),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: Platform.OS !== 'web' }),
-    ]).start(() => setToast(null));
-  }, [toast, toastOpacity]);
-
-  const onToggle = async (task: Task) => {
-    const nowDone = await toggleTask(task.id);
-    if (nowDone && user) {
-      setToast(randomCheer(user.ageGroup));
-      if (settings.hapticsEnabled && Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
-    }
-  };
 
   if (!user) return null;
+  // On attend les données : évite d'afficher l'écran une fraction de seconde avant l'accueil guidé.
+  if (!ready) return <ActivityIndicator style={{ marginTop: 80 }} color={colors.primary} size="large" />;
+  // Premier lancement : accueil guidé.
+  if (!settings.onboarded) return <Redirect href="/welcome" />;
+
+  const view = settings.homeView ?? (user.ageGroup === 'enfant' ? 'focus' : 'list');
+  const upcoming = upcomingTasks(tasks);
+  const todo = tasks.filter((t) => !t.done);
+  const done = tasks.filter((t) => t.done);
+  const now = currentMoment();
   const timerActive = timer.status === 'running' || timer.status === 'paused';
 
   return (
-    <View style={{ flex: 1 }}>
-      <Screen onRefresh={refresh}>
-        <View style={{ gap: 2 }}>
-          <Txt variant="title">
-            {user.avatar} Salut {user.name} !
-          </Txt>
-          <Txt variant="muted" style={{ textTransform: 'capitalize' }}>
-            {todayLabel()}
-          </Txt>
-        </View>
+    <Screen onRefresh={refresh}>
+      <View style={{ gap: 2 }}>
+        <Txt variant="title">
+          {user.avatar} Salut {user.name} !
+        </Txt>
+        <Txt variant="muted" style={{ textTransform: 'capitalize' }}>
+          {todayLabel()} · {momentLabel(now)}
+        </Txt>
+      </View>
 
-        {timerActive && (
-          <Pressable onPress={() => router.navigate('/timer')} accessibilityRole="button">
-            <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <Text style={{ fontSize: 24 }}>⏳</Text>
-              <Txt style={{ flex: 1, fontWeight: '700' }} numberOfLines={1}>
-                {timer.label || 'Timer'} — {formatDuration(timer.remainingSec)}
-                {timer.status === 'paused' ? ' (pause)' : ''}
+      <RewardBar />
+
+      {timerActive && (
+        <Pressable onPress={() => router.navigate('/timer')} accessibilityRole="button" accessibilityLabel="Ouvrir le timer">
+          <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <Text style={{ fontSize: 24 }}>⏳</Text>
+            <Txt style={{ flex: 1, fontWeight: '700' }} numberOfLines={1}>
+              {timer.label || 'Timer'} — {formatDuration(timer.remainingSec)}
+              {timer.status === 'paused' ? ' (pause)' : ''}
+            </Txt>
+          </Card>
+        </Pressable>
+      )}
+
+      <Segmented
+        value={view}
+        onChange={(v) => updateSettings({ homeView: v })}
+        options={[
+          { value: 'focus', label: '🎯 Une à la fois' },
+          { value: 'list', label: '📋 Ma journée' },
+        ]}
+      />
+
+      {view === 'focus' ? (
+        <>
+          <FocusCard upcoming={upcoming} />
+          <QuickAdd />
+        </>
+      ) : (
+        <>
+          <QuickAdd />
+
+          {tasks.length === 0 && (
+            <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 24 }}>
+              <Text style={{ fontSize: 48 }}>🌱</Text>
+              <Txt variant="subtitle">Rien pour l’instant</Txt>
+              <Txt variant="muted" style={{ textAlign: 'center' }}>
+                Écris une petite tâche ci-dessus, ou choisis une routine toute prête.
               </Txt>
             </Card>
-          </Pressable>
-        )}
+          )}
 
-        {tasks.length > 0 && (
-          <Card style={{ gap: 10 }}>
-            <Txt variant="subtitle">
-              {todo.length === 0
-                ? playful
-                  ? 'Tout est fait, bravo ! 🏆'
-                  : 'Tout est fait ✅'
-                : `${done.length} / ${tasks.length} ${playful ? 'faites 💪' : 'terminées'}`}
-            </Txt>
-            <View style={[styles.bar, { backgroundColor: colors.primarySoft, borderRadius: radius }]}>
+          {todo.length > 0 && (
+            <View
+              style={[styles.progress, { backgroundColor: colors.primarySoft, borderRadius: radius }]}
+              accessibilityLabel={`${done.length} tâches faites sur ${tasks.length}`}
+            >
               <View
-                style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.success, borderRadius: radius }}
+                style={{ width: `${(done.length / tasks.length) * 100}%`, height: '100%', backgroundColor: colors.success, borderRadius: radius }}
               />
             </View>
-          </Card>
-        )}
+          )}
 
-        {tasks.length === 0 && (
-          <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 28 }}>
-            <Text style={{ fontSize: 48 }}>🌱</Text>
-            <Txt variant="subtitle">Rien pour l’instant</Txt>
-            <Txt variant="muted" style={{ textAlign: 'center' }}>
-              Ajoute une première petite tâche. Plus elle est simple, plus c’est facile de commencer !
-            </Txt>
-          </Card>
-        )}
+          {groupByMoment(todo).map((group) => (
+            <View key={group.moment ?? 'libre'} style={{ gap: 10 }}>
+              <View style={styles.groupHeader}>
+                <Txt variant="subtitle">{momentLabel(group.moment)}</Txt>
+                {group.moment === now && (
+                  <View style={[styles.nowBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 13 }}>MAINTENANT</Text>
+                  </View>
+                )}
+              </View>
+              {group.tasks.map((t, i) => (
+                <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === group.tasks.length - 1} />
+              ))}
+            </View>
+          ))}
 
-        {todo.length > 0 && <Txt variant="subtitle">À faire</Txt>}
-        {todo.map((t, i) => (
-          <TaskItem key={t.id} task={t} onToggle={onToggle} isFirst={i === 0} isLast={i === todo.length - 1} />
-        ))}
-
-        <Button label="＋ Ajouter une tâche" onPress={() => router.push('/task/new')} />
-
-        {done.length > 0 && (
-          <View style={{ gap: 12 }}>
-            <Button
-              variant="ghost"
-              label={`${showDone ? '▾' : '▸'} Faites (${done.length})`}
-              onPress={() => setShowDone((s) => !s)}
-              style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }}
-            />
-            {showDone && (
-              <>
-                {done.map((t, i) => (
-                  <TaskItem key={t.id} task={t} onToggle={onToggle} isFirst={i === 0} isLast={i === done.length - 1} />
-                ))}
-                <Button variant="secondary" label="🧹 Effacer les tâches faites" onPress={clearDone} />
-                <Txt variant="small" style={{ textAlign: 'center' }}>
-                  Les routines quotidiennes sont gardées : elles reviennent demain.
-                </Txt>
-              </>
-            )}
-          </View>
-        )}
-      </Screen>
-
-      {toast && (
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.toast, { opacity: toastOpacity, backgroundColor: colors.success, borderRadius: radius }]}
-        >
-          <Text style={styles.toastText}>{toast}</Text>
-        </Animated.View>
+          {done.length > 0 && (
+            <View style={{ gap: 12 }}>
+              <Button
+                variant="ghost"
+                label={`${showDone ? '▾' : '▸'} Faites (${done.length})`}
+                onPress={() => setShowDone((s) => !s)}
+                style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }}
+              />
+              {showDone && (
+                <>
+                  {done.map((t, i) => (
+                    <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === done.length - 1} />
+                  ))}
+                  <Button variant="secondary" label="🧹 Ranger les tâches faites" onPress={clearDone} />
+                  <Txt variant="small" style={{ textAlign: 'center' }}>
+                    Les routines de chaque jour sont gardées : elles reviennent demain.
+                  </Txt>
+                </>
+              )}
+            </View>
+          )}
+        </>
       )}
+
+      <View style={styles.actions}>
+        <Button label="＋ Tâche détaillée" variant="secondary" onPress={() => router.push('/task/new')} style={{ flex: 1 }} />
+        <Button label="💡 Idées" variant="secondary" onPress={() => router.push('/templates')} style={{ flex: 1 }} />
+      </View>
+    </Screen>
+  );
+}
+
+/** Ajout rapide en une ligne : capturer une idée avant qu'elle s'envole. */
+function QuickAdd() {
+  const { addTask } = useData();
+  const { toast } = useFeedback();
+  const { colors, radius, fontScale } = useAppTheme();
+  const [title, setTitle] = useState('');
+
+  const submit = async () => {
+    const clean = title.trim();
+    if (!clean) return;
+    setTitle('');
+    await addTask({
+      title: clean,
+      emoji: '📝',
+      durationMin: null,
+      steps: [],
+      moment: null,
+      reminder: { enabled: false, at: null, repeat: 'none', nudge: true },
+    });
+    toast('Ajoutée ✔');
+  };
+
+  return (
+    <View style={[styles.quick, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius }]}>
+      <TextInput
+        value={title}
+        onChangeText={setTitle}
+        onSubmitEditing={submit}
+        placeholder="Ajouter vite une tâche…"
+        placeholderTextColor={colors.textMuted}
+        returnKeyType="done"
+        maxLength={80}
+        accessibilityLabel="Ajouter vite une tâche"
+        style={{ flex: 1, fontSize: 17 * fontScale, color: colors.text, paddingVertical: 12 }}
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ajouter"
+        onPress={submit}
+        disabled={!title.trim()}
+        style={[styles.quickButton, { backgroundColor: title.trim() ? colors.primary : colors.primarySoft }]}
+      >
+        <Text style={{ color: title.trim() ? colors.primaryText : colors.primary, fontSize: 26, fontWeight: '800' }}>＋</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { height: 14, overflow: 'hidden' },
-  toast: { position: 'absolute', bottom: 24, alignSelf: 'center', paddingHorizontal: 22, paddingVertical: 14 },
-  toastText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  progress: { height: 12, overflow: 'hidden' },
+  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  nowBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  actions: { flexDirection: 'row', gap: 10 },
+  quick: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 14, paddingRight: 6, borderWidth: 1 },
+  quickButton: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
 });

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RoundButton, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
+import { useTaskActions } from './useTaskActions';
 import { useTimer } from '@/lib/timer';
 import type { Task } from '@/lib/types';
 import { useAppTheme } from '@/lib/useAppTheme';
@@ -15,7 +16,7 @@ export function formatTime(iso: string) {
 
 export function reminderLabel(task: Task): string | null {
   const { reminder } = task;
-  if (!reminder.enabled || !reminder.at) return null;
+  if (!reminder.enabled || !reminder.at) return reminder.repeat === 'daily' ? '🔁 Chaque jour' : null;
   if (reminder.repeat === 'daily') return `🔁 ${formatTime(reminder.at)}`;
   const d = new Date(reminder.at);
   const today = new Date();
@@ -42,7 +43,8 @@ export function TaskItem({
   isLast: boolean;
 }) {
   const { colors, radius, fontScale } = useAppTheme();
-  const { toggleStep, moveTask } = useData();
+  const { moveTask } = useData();
+  const { completeStep } = useTaskActions();
   const timer = useTimer();
   const { parent } = useAuth();
   const fromParent = parent && task.createdBy === parent.id ? parent : null;
@@ -125,7 +127,7 @@ export function TaskItem({
               key={s.id}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: s.done }}
-              onPress={() => toggleStep(task.id, s.id)}
+              onPress={() => completeStep(task, s)}
               style={styles.step}
             >
               <View

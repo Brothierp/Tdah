@@ -5,16 +5,33 @@ enfants, ados et adultes — à s'organiser.
 
 ## Fonctionnalités
 
-- **To-do list** : tâches avec emoji, durée estimée et **petites étapes** à cocher ; progression du
-  jour et encouragements ; routines quotidiennes qui reviennent chaque matin.
-- **Timer** : durées courtes en un geste, anneau visuel, pause / +1 min, lancement depuis une tâche,
-  alerte de fin même app fermée.
-- **Rappels activables** : interrupteur général, rappel par tâche (une fois ou chaque jour),
-  **relance** si la tâche n'est pas cochée, résumé du jour.
-- **Comptes** et **espace parents** : un parent crée le compte de son enfant (ou relie le compte d'un
-  ado avec un code), voit sa progression, lui ajoute des tâches et des rappels, réinitialise son mot
-  de passe. L'enfant voit toujours que son compte est suivi.
-- **Adapté à l'âge** : Enfant / Ado / Adulte change la taille du texte, les formes et le ton.
+Pensée pour les personnes **TDAH** et **TSA** : peu de choix à la fois, une journée prévisible,
+des transitions annoncées, une motivation immédiate et un confort sensoriel réglable.
+
+- **🎯 Une chose à la fois** : l'écran d'accueil peut n'afficher que la prochaine tâche, avec une
+  seule étape à la fois et trois gros boutons (Commencer, C'est fait, Plus tard). La tâche suivante
+  est annoncée pour éviter les surprises.
+- **📋 Ma journée** : emploi du temps visuel par moments (☀️ matin, 🍽️ midi, 🌤️ après-midi,
+  🌙 soir, 🕐 quand je veux), le moment actuel est mis en avant.
+- **Ajout en une ligne** pour capturer une idée tout de suite, ou **tâche détaillée** (emoji,
+  moment, durée, petites étapes, routine quotidienne, rappel).
+- **💡 Routines toutes prêtes** : matin, soir, devoirs, ranger sa chambre, démarrer sa journée,
+  maison, prendre soin de soi — ajoutées en un geste, étapes comprises.
+- **⏳ Timer visuel** : lancement en un geste, heure de fin affichée, étape en cours visible,
+  **avertissement 1 minute avant la fin** (aide aux transitions), pause proposée à la fin.
+- **⭐ Motivation** : une étoile par tâche, série de jours 🔥, objectif de récompense 🎁,
+  petite célébration (désactivable).
+- **Droit à l'erreur** : bouton **Annuler** après avoir coché ou supprimé une tâche.
+- **🔔 Rappels activables** : interrupteur général, rappel par tâche, relance si pas fait,
+  résumé du jour.
+- **🌿 Confort** : taille du texte (normal, grand, très grand), **mode calme** (couleurs douces,
+  aucune animation), vibrations, respect du réglage « réduire les animations » du téléphone.
+- **Accueil guidé** au premier lancement (4 écrans courts, on peut passer).
+- **👨‍👩‍👧 Espace parents** : un parent crée le compte de son enfant (ou relie le compte d'un ado
+  avec un code), voit sa progression et ses étoiles, lui ajoute des tâches ou des routines,
+  réinitialise son mot de passe. L'enfant voit toujours que son compte est suivi.
+- **Adapté à l'âge** : Enfant / Ado / Adulte change la taille du texte, les formes, le ton et
+  l'écran d'accueil par défaut.
 - **Hors ligne** : tout reste utilisable sans réseau ; les modifications partent dès qu'il revient.
 
 ## Deux modes de fonctionnement
@@ -63,17 +80,23 @@ Politique de confidentialité : [docs/CONFIDENTIALITE.md](docs/CONFIDENTIALITE.m
 src/
   app/                      écrans (Expo Router : chaque fichier = un écran)
     (auth)/                 choix du profil, connexion, inscription
-    (tabs)/                 Tâches, Timer, Famille (adultes), Réglages
+    (tabs)/                 Aujourd'hui, Timer, Famille (adultes), Réglages
+    welcome.tsx             accueil guidé (premier lancement)
+    templates.tsx           routines toutes prêtes (?owner=<enfant> pour un parent)
     task/[id].tsx           créer / modifier une tâche (?owner=<enfant> pour un parent)
     family/                 ajouter un enfant, suivi d'un enfant
     privacy.tsx             politique de confidentialité
-  components/               boutons, champs, carte de tâche, anneau du timer
+  components/               UI commune, carte « une à la fois », barre de récompenses,
+                            retours (Annuler, célébration), carte de tâche, anneau du timer
   lib/
     backend/                interface Backend + implémentations local.ts et cloud.ts
     auth.tsx                compte connecté et famille
     data.tsx                tâches et réglages du compte connecté
     childData.ts            tâches d'un enfant vues par son parent
     taskOps.ts              opérations pures sur les tâches (testées)
+    moments.ts              moments de la journée, « que faire maintenant »
+    rewards.ts              étoiles, série de jours, objectif de récompense
+    templates.ts            contenu des routines toutes prêtes
     notifications.ts        programmation des rappels et du timer
     timer.tsx               état du timer (fiable en arrière-plan)
 supabase/

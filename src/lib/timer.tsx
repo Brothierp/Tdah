@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from './auth';
 import { useData } from './data';
-import { cancelTimerEnd, scheduleTimerEnd } from './notifications';
+import { cancelTimerEnd, scheduleTimerEnd, TIMER_WARNING_MIN_TOTAL, TIMER_WARNING_SEC } from './notifications';
 
 export type TimerStatus = 'idle' | 'running' | 'paused' | 'finished';
 
@@ -21,6 +21,8 @@ interface TimerState {
 
 interface TimerContextValue extends TimerState {
   remainingSec: number;
+  /** La fin approche (dernière minute) : moment de se préparer à la suite. */
+  warning: boolean;
   start: (minutes: number, label: string, taskId?: string | null) => void;
   pause: () => void;
   resume: () => void;
@@ -39,6 +41,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   const [state, setState] = useState<TimerState>(IDLE);
   const [now, setNow] = useState(() => Date.now());
+  const warnedRef = useRef(false);
+  const warnEnabled = settings.timerWarning;
 
   // À la déconnexion (le provider est démonté), on annule l'alerte de fin du timer.
   useEffect(
@@ -51,11 +55,18 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // Tic-tac : met à jour l'affichage et détecte la fin du timer.
   const { status, endAt } = state;
   const { hapticsEnabled } = settings;
+  const canWarn = warnEnabled && state.totalSec >= TIMER_WARNING_MIN_TOTAL;
   useEffect(() => {
     if (status !== 'running' || !endAt) return;
     const id = setInterval(() => {
       const t = Date.now();
       setNow(t);
+      if (canWarn && !warnedRef.current && endAt - t <= TIMER_WARNING_SEC * 1000 && t < endAt) {
+        warnedRef.current = true;
+        if (hapticsEnabled && Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        }
+      }
       if (t >= endAt) {
         setState((s) => ({ ...s, status: 'finished', endAt: null }));
         if (hapticsEnabled && Platform.OS !== 'web') {
@@ -64,7 +75,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       }
     }, 250);
     return () => clearInterval(id);
-  }, [status, endAt, hapticsEnabled]);
+  }, [status, endAt, hapticsEnabled, canWarn]);
 
   const remainingSec =
     state.status === 'running' && state.endAt
@@ -88,12 +99,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     (seconds: number, base: Omit<TimerState, 'status' | 'endAt' | 'pausedRemaining'>) => {
       const t = Date.now();
       setNow(t);
+      warnedRef.current = seconds <= TIMER_WARNING_SEC;
       setState({ ...base, status: 'running', endAt: t + seconds * 1000, pausedRemaining: 0 });
       if (userId) {
-        cancelTimerEnd(userId).then(() => scheduleTimerEnd(userId, seconds, base.label || 'Ton timer est terminé.'));
+        const warn = warnEnabled && base.totalSec >= TIMER_WARNING_MIN_TOTAL;
+        cancelTimerEnd(userId).then(() => scheduleTimerEnd(userId, seconds, base.label || 'Ton timer est terminé.', warn));
       }
     },
-    [userId],
+    [userId, warnEnabled],
   );
 
   const start = useCallback<TimerContextValue['start']>(
@@ -131,9 +144,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     [state, remainingSec, run],
   );
 
+  const warning = canWarn && state.status === 'running' && remainingSec > 0 && remainingSec <= TIMER_WARNING_SEC;
+
   const value = useMemo(
-    () => ({ ...state, remainingSec, start, pause, resume, reset, addMinutes }),
-    [state, remainingSec, start, pause, resume, reset, addMinutes],
+    () => ({ ...state, remainingSec, warning, start, pause, resume, reset, addMinutes }),
+    [state, remainingSec, warning, start, pause, resume, reset, addMinutes],
   );
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;
 }

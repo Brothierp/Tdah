@@ -103,7 +103,7 @@ export function Button({
 }: {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost';
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
@@ -112,6 +112,7 @@ export function Button({
   const palette = {
     primary: { bg: colors.primary, fg: colors.primaryText },
     secondary: { bg: colors.primarySoft, fg: colors.primary },
+    success: { bg: colors.success, fg: '#FFFFFF' },
     danger: { bg: colors.danger, fg: '#FFFFFF' },
     ghost: { bg: 'transparent', fg: colors.primary },
   }[variant];
@@ -307,7 +308,76 @@ export function ErrorText({ message }: { message: string | null }) {
   return <Txt style={{ color: colors.danger, fontWeight: '600' }}>{message}</Txt>;
 }
 
+/** Choix entre 2 ou 3 options, toujours visibles (pas de menu caché). */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  const { colors, radius, fontScale } = useAppTheme();
+  return (
+    <View accessibilityRole="tablist" style={[styles.segmented, { backgroundColor: colors.primarySoft, borderRadius: radius }]}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, { borderRadius: radius - 4, backgroundColor: selected ? colors.card : 'transparent' }]}
+          >
+            <Text
+              numberOfLines={2}
+              style={{ fontSize: 15 * fontScale, fontWeight: '700', color: selected ? colors.text : colors.textMuted, textAlign: 'center' }}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Carte repliable : on n'affiche que ce dont on a besoin (moins de surcharge visuelle). */
+export function Section({
+  title,
+  children,
+  initiallyOpen = false,
+}: {
+  title: string;
+  children: ReactNode;
+  initiallyOpen?: boolean;
+}) {
+  const { colors } = useAppTheme();
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <Card style={{ gap: open ? 12 : 0, paddingVertical: 4 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((o) => !o)}
+        style={styles.sectionHeader}
+      >
+        <Txt variant="subtitle" style={{ flex: 1 }}>
+          {title}
+        </Txt>
+        <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>{open ? '−' : '+'}</Text>
+      </Pressable>
+      {open ? <View style={{ gap: 12, paddingBottom: 12 }}>{children}</View> : null}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  segmented: { flexDirection: 'row', padding: 4, gap: 4 },
+  segment: { flex: 1, paddingVertical: 11, paddingHorizontal: 6, justifyContent: 'center' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', minHeight: 52, gap: 8 },
   screen: { padding: 20, gap: 16, paddingBottom: 40, width: '100%', maxWidth: 640, alignSelf: 'center' },
   button: { paddingVertical: 15, paddingHorizontal: 20, minHeight: 52, justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },

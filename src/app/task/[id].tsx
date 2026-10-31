@@ -8,7 +8,9 @@ import { useData } from '@/lib/data';
 import type { TaskInput } from '@/lib/taskOps';
 import { ensurePermission, notificationsSupported } from '@/lib/notifications';
 import { TASK_EMOJIS } from '@/lib/theme';
-import type { ReminderRepeat, Settings, Task } from '@/lib/types';
+import { useTaskActions } from '@/components/useTaskActions';
+import { ANYTIME, MOMENTS, momentInfo } from '@/lib/moments';
+import type { Moment, ReminderRepeat, Settings, Task } from '@/lib/types';
 
 const DURATIONS = [2, 5, 10, 15, 25, 45];
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -61,6 +63,7 @@ export default function TaskForm() {
 
 function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store: TaskStore; ownerName: string | null }) {
   const { addTask, updateTask, deleteTask, settings } = store;
+  const { remove: removeWithUndo } = useTaskActions();
 
   const initialDate = existing?.reminder.at ? new Date(existing.reminder.at) : defaultReminderDate();
   const isTomorrow = (d: Date) => d.toDateString() !== new Date().toDateString() && d > new Date();
@@ -75,6 +78,19 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
   const [minute, setMinute] = useState(initialDate.getMinutes());
   const [repeat, setRepeat] = useState<ReminderRepeat>(existing?.reminder.repeat ?? 'none');
   const [nudge, setNudge] = useState(existing?.reminder.nudge ?? true);
+  const [moment, setMoment] = useState<Moment | null>(existing?.moment ?? null);
+
+  const chooseMoment = (m: Moment | null) => {
+    setMoment(m);
+    // L'heure du rappel suit le moment choisi (modifiable ensuite).
+    const info = momentInfo(m);
+    if (info) {
+      setHour(info.defaultTime[0]);
+      setMinute(info.defaultTime[1]);
+      const passed = new Date().getHours() * 60 + new Date().getMinutes() >= info.defaultTime[0] * 60 + info.defaultTime[1];
+      setTomorrow(passed);
+    }
+  };
   const [error, setError] = useState<string | null>(null);
 
   const setIn = (minutes: number) => {
@@ -110,6 +126,7 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
       emoji,
       durationMin: duration,
       steps,
+      moment,
       reminder: { enabled: reminderOn, at: reminderOn ? at.toISOString() : null, repeat, nudge },
     };
     if (existing) await updateTask(existing.id, input);
@@ -119,6 +136,12 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
 
   const remove = async () => {
     if (!existing) return;
+    if (!ownerName) {
+      // Sa propre tâche : suppression immédiate, avec « Annuler » pendant quelques secondes.
+      router.back();
+      await removeWithUndo(existing);
+      return;
+    }
     if (await confirm('Supprimer la tâche ?', existing.title, 'Supprimer')) {
       await deleteTask(existing.id);
       router.back();
@@ -134,6 +157,22 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
       />
 
       <Field label="Quoi ?" value={title} onChangeText={setTitle} placeholder="ex : Me brosser les dents" maxLength={80} autoFocus={!existing} />
+
+      <Card style={{ gap: 10 }}>
+        <Txt variant="subtitle">🗓️ Quand ?</Txt>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {MOMENTS.map((m) => (
+            <Chip key={m.value} label={`${m.emoji} ${m.label}`} selected={moment === m.value} onPress={() => chooseMoment(m.value)} />
+          ))}
+          <Chip label={`${ANYTIME.emoji} ${ANYTIME.label}`} selected={moment === null} onPress={() => chooseMoment(null)} />
+        </View>
+        <ToggleRow
+          label="🔁 Tous les jours"
+          description="Une routine : elle redevient « à faire » chaque matin."
+          value={repeat === 'daily'}
+          onValueChange={(v) => setRepeat(v ? 'daily' : 'none')}
+        />
+      </Card>
 
       <View style={{ gap: 8 }}>
         <Txt variant="muted">Une image pour la reconnaître</Txt>
@@ -185,10 +224,6 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
         />
         {reminderOn && (
           <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Chip label="Une fois" selected={repeat === 'none'} onPress={() => setRepeat('none')} />
-              <Chip label="🔁 Chaque jour" selected={repeat === 'daily'} onPress={() => setRepeat('daily')} />
-            </View>
             {repeat === 'none' && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip label="Aujourd'hui" selected={!tomorrow} onPress={() => setTomorrow(false)} />
@@ -210,9 +245,6 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
               value={nudge}
               onValueChange={setNudge}
             />
-            {repeat === 'daily' && (
-              <Txt variant="small">Une routine quotidienne redevient « à faire » chaque matin.</Txt>
-            )}
           </>
         )}
       </Card>

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Button, Card, Chip, EmojiGrid, ErrorText, Field, Screen, Stepper, ToggleRow, Txt } from '@/components/ui';
+import { Button, Card, Chip, EmojiGrid, ErrorText, Field, Screen, Section, Segmented, Stepper, ToggleRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { backend } from '@/lib/backend';
 import { confirm } from '@/lib/confirm';
@@ -27,6 +27,7 @@ export default function SettingsScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [permissionWarning, setPermissionWarning] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [reward, setReward] = useState(settings.rewardLabel);
 
   if (!user) return null;
 
@@ -100,8 +101,7 @@ export default function SettingsScreen() {
         </Card>
       )}
 
-      <Card style={{ gap: 12 }}>
-        <Txt variant="subtitle">👤 Mon profil</Txt>
+      <Section title="👤 Mon profil">
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-end' }}>
           <Button
             variant="secondary"
@@ -130,7 +130,7 @@ export default function SettingsScreen() {
             }}
           />
         )}
-        <Txt variant="muted">Affichage adapté pour :</Txt>
+        <Txt variant="muted">L’app est adaptée pour :</Txt>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {AGE_GROUPS.filter((g) => !(parent && g.value === 'adulte')).map((g) => (
             <Chip
@@ -143,12 +143,60 @@ export default function SettingsScreen() {
         </View>
         <Txt variant="small">{user.email ? `E-mail : ${user.email}` : `Identifiant : ${user.username}`}</Txt>
         <ErrorText message={profileError} />
-      </Card>
+      </Section>
 
       {mode === 'cloud' && !parent && user.ageGroup !== 'adulte' && <LinkCodeCard />}
 
-      <Card style={{ gap: 8 }}>
-        <Txt variant="subtitle">🔔 Rappels</Txt>
+      <Section title="🌿 Affichage et confort">
+        <Txt style={{ fontWeight: '700' }}>Écran d’accueil</Txt>
+        <Segmented
+          value={settings.homeView ?? (user.ageGroup === 'enfant' ? 'focus' : 'list')}
+          onChange={(v) => updateSettings({ homeView: v })}
+          options={[
+            { value: 'focus', label: '🎯 Une à la fois' },
+            { value: 'list', label: '📋 Ma journée' },
+          ]}
+        />
+        <Txt style={{ fontWeight: '700' }}>Taille du texte</Txt>
+        <Segmented
+          value={settings.textSize}
+          onChange={(v) => updateSettings({ textSize: v })}
+          options={[
+            { value: 'normal', label: 'Normal' },
+            { value: 'grand', label: 'Grand' },
+            { value: 'tres-grand', label: 'Très grand' },
+          ]}
+        />
+        <ToggleRow
+          label="🌿 Mode calme"
+          description="Couleurs plus douces, pas d’animations ni de confettis."
+          value={settings.calmMode}
+          onValueChange={(v) => updateSettings({ calmMode: v })}
+        />
+        <ToggleRow
+          label="📳 Vibrations"
+          description="Quand une tâche ou un timer est terminé."
+          value={settings.hapticsEnabled}
+          onValueChange={(v) => updateSettings({ hapticsEnabled: v })}
+        />
+      </Section>
+
+      <Section title="⏳ Timer">
+        <ToggleRow
+          label="Prévenir avant la fin"
+          description="Une alerte 1 minute avant la fin, pour se préparer à passer à autre chose."
+          value={settings.timerWarning}
+          onValueChange={(v) => updateSettings({ timerWarning: v })}
+        />
+        <ToggleRow
+          label="Garder l’écran allumé"
+          description="Pendant qu’un timer tourne."
+          value={settings.keepScreenAwake}
+          onValueChange={(v) => updateSettings({ keepScreenAwake: v })}
+        />
+      </Section>
+
+      <Section title="🔔 Rappels">
         {!notificationsSupported && (
           <Txt variant="small">Les rappels fonctionnent sur l’application mobile (iOS / Android).</Txt>
         )}
@@ -160,7 +208,7 @@ export default function SettingsScreen() {
         />
         <ToggleRow
           label="Résumé du jour"
-          description="Chaque jour, un rappel du nombre de tâches qui t'attendent."
+          description="Chaque jour, un rappel du nombre de tâches qui t’attendent."
           value={settings.dailySummaryEnabled}
           onValueChange={(v) => toggleReminders('dailySummaryEnabled', v)}
           disabled={!settings.remindersEnabled}
@@ -186,50 +234,65 @@ export default function SettingsScreen() {
             />
           </View>
         )}
-        <Txt variant="muted">Délai de relance si une tâche n’est pas faite :</Txt>
+        <Txt variant="muted">Relancer si une tâche n’est pas faite, après :</Txt>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {NUDGE_DELAYS.map((m) => (
             <Chip key={m} label={`${m} min`} selected={settings.nudgeDelayMin === m} onPress={() => updateSettings({ nudgeDelayMin: m })} />
           ))}
         </View>
         <ErrorText message={permissionWarning} />
-      </Card>
+      </Section>
 
-      <Card style={{ gap: 8 }}>
-        <Txt variant="subtitle">⏳ Timer</Txt>
+      <Section title="🎁 Récompense">
+        <Txt variant="small">
+          Chaque tâche faite donne une étoile ⭐. Choisis une récompense à gagner (à décider avec un parent, par exemple).
+        </Txt>
         <ToggleRow
-          label="Vibrations"
-          description="Une petite vibration quand une tâche ou un timer est terminé."
-          value={settings.hapticsEnabled}
-          onValueChange={(v) => updateSettings({ hapticsEnabled: v })}
+          label="Avoir un objectif"
+          value={settings.rewardGoal != null}
+          onValueChange={(v) => updateSettings({ rewardGoal: v ? 10 : null })}
         />
-        <ToggleRow
-          label="Garder l'écran allumé"
-          description="Pendant qu'un timer tourne."
-          value={settings.keepScreenAwake}
-          onValueChange={(v) => updateSettings({ keepScreenAwake: v })}
-        />
-      </Card>
+        {settings.rewardGoal != null && (
+          <>
+            <Stepper
+              label="Étoiles à gagner"
+              value={settings.rewardGoal}
+              onChange={(v) => updateSettings({ rewardGoal: v })}
+              min={5}
+              max={100}
+              step={5}
+            />
+            <Field
+              label="La récompense"
+              value={reward}
+              onChangeText={setReward}
+              onBlur={() => reward.trim() !== settings.rewardLabel && updateSettings({ rewardLabel: reward.trim() })}
+              placeholder="ex : une sortie au parc, un film…"
+              maxLength={40}
+            />
+          </>
+        )}
+      </Section>
 
-      <Card style={{ gap: 10 }}>
-        <Txt variant="subtitle">🔑 Mot de passe</Txt>
+      <Section title="🔑 Mon compte">
+        <Txt style={{ fontWeight: '700' }}>Changer de mot de passe</Txt>
         <Field label="Mot de passe actuel" value={pwCurrent} onChangeText={setPwCurrent} secureTextEntry />
         <Field label="Nouveau mot de passe" value={pwNext} onChangeText={setPwNext} secureTextEntry />
         <ErrorText message={pwError} />
         {pwMessage ? <Txt style={{ color: colors.success, fontWeight: '600' }}>{pwMessage}</Txt> : null}
         <Button variant="secondary" label="Changer le mot de passe" onPress={submitPassword} disabled={!pwCurrent || !pwNext} />
-      </Card>
+        <Button variant="secondary" label="✨ Revoir l’accueil guidé" onPress={() => updateSettings({ onboarded: false }).then(() => router.navigate('/'))} />
+        {!parent && (
+          <View style={{ gap: 10, marginTop: 8 }}>
+            <Txt style={{ fontWeight: '700', color: colors.danger }}>Supprimer mon compte</Txt>
+            <Field label="Confirme avec ton mot de passe" value={deletePw} onChangeText={setDeletePw} secureTextEntry />
+            <ErrorText message={deleteError} />
+            <Button variant="danger" label="Supprimer définitivement" onPress={submitDelete} disabled={!deletePw} />
+          </View>
+        )}
+      </Section>
 
       <Button label="🚪 Se déconnecter" variant="secondary" onPress={submitLogout} />
-
-      {!parent && (
-        <Card style={{ gap: 10, borderColor: colors.danger }}>
-          <Txt variant="subtitle">Supprimer mon compte</Txt>
-          <Field label="Confirme avec ton mot de passe" value={deletePw} onChangeText={setDeletePw} secureTextEntry />
-          <ErrorText message={deleteError} />
-          <Button variant="danger" label="Supprimer définitivement" onPress={submitDelete} disabled={!deletePw} />
-        </Card>
-      )}
       <Button variant="ghost" label="Politique de confidentialité" onPress={() => router.push('/privacy')} />
     </Screen>
   );

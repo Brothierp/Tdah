@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { FeedbackProvider } from '@/components/Feedback';
 import { NotificationRouter } from '@/components/NotificationRouter';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DataProvider } from '@/lib/data';
@@ -35,6 +36,8 @@ function RootNavigator() {
         <Stack.Screen name="task/[id]" options={{ presentation: 'modal', headerShown: true, title: 'Tâche' }} />
         <Stack.Screen name="family/[childId]" options={{ headerShown: true, title: 'Enfant' }} />
         <Stack.Screen name="family/add" options={{ presentation: 'modal', headerShown: true, title: 'Ajouter un enfant' }} />
+        <Stack.Screen name="templates" options={{ presentation: 'modal', headerShown: true, title: 'Idées de routines' }} />
+        <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />
@@ -50,9 +53,11 @@ export default function RootLayout() {
       <AuthProvider>
         <DataProvider>
           <TimerProvider>
-            <StatusBar style="auto" />
-            <RootNavigator />
-            <NotificationRouter />
+            <FeedbackProvider>
+              <StatusBar style="auto" />
+              <RootNavigator />
+              <NotificationRouter />
+            </FeedbackProvider>
           </TimerProvider>
         </DataProvider>
       </AuthProvider>

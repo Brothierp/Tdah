@@ -6,6 +6,7 @@ import { Button, Card, ErrorText, Field, Screen, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useChildData } from '@/lib/childData';
 import { confirm } from '@/lib/confirm';
+import { visibleStreak } from '@/lib/rewards';
 import { doneTodayCount } from '@/lib/taskOps';
 import { AGE_GROUPS } from '@/lib/theme';
 import type { Task } from '@/lib/types';
@@ -82,11 +83,20 @@ export default function ChildScreen() {
           {age?.emoji} {age?.label} · identifiant : {child.username}
         </Txt>
         <Txt variant="small">
+          ⭐ {settings.stars} étoiles · 🔥 {visibleStreak(settings)} jour(s) d’affilée
+          {settings.rewardGoal ? ` · 🎁 ${settings.rewardLabel || 'objectif'} : ${Math.max(0, settings.stars - settings.rewardSpent)}/${settings.rewardGoal}` : ''}
+        </Txt>
+        <Txt variant="small">
           {settings.remindersEnabled ? '🔔 Rappels activés sur son compte' : '🔕 Rappels coupés sur son compte'}
         </Txt>
       </Card>
 
       <Button label={`＋ Ajouter une tâche pour ${child.name}`} onPress={() => router.push({ pathname: '/task/[id]', params: { id: 'new', owner: child.id } })} />
+      <Button
+        variant="secondary"
+        label={`💡 Ajouter une routine pour ${child.name}`}
+        onPress={() => router.push({ pathname: '/templates', params: { owner: child.id } })}
+      />
 
       <Txt variant="subtitle">À faire</Txt>
       {todo.length === 0 && <Txt variant="muted">Rien en attente 🎉</Txt>}

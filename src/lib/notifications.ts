@@ -145,9 +145,25 @@ export async function cancelAllForUser(userId: string): Promise<void> {
 }
 
 const timerId = (userId: string) => `timer-${userId}`;
+const timerWarnId = (userId: string) => `timer-warn-${userId}`;
 
-export async function scheduleTimerEnd(userId: string, seconds: number, label: string): Promise<void> {
+/** Avertissement de fin : seulement pour les timers d'au moins 3 minutes. */
+export const TIMER_WARNING_SEC = 60;
+export const TIMER_WARNING_MIN_TOTAL = 180;
+
+export async function scheduleTimerEnd(userId: string, seconds: number, label: string, warn = false): Promise<void> {
   if (!notificationsSupported || seconds < 1) return;
+  if (warn && seconds > TIMER_WARNING_SEC + 5) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: timerWarnId(userId),
+      content: { title: '⏳ Plus qu’une minute', body: `Prépare-toi à finir : ${label}`, data: { userId, kind: 'timer' }, sound: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: Math.round(seconds - TIMER_WARNING_SEC),
+        channelId: CHANNEL_ID,
+      },
+    });
+  }
   await Notifications.scheduleNotificationAsync({
     identifier: timerId(userId),
     content: { title: '⏰ Temps écoulé !', body: label, data: { userId, kind: 'timer' }, sound: true },
@@ -162,4 +178,5 @@ export async function scheduleTimerEnd(userId: string, seconds: number, label: s
 export async function cancelTimerEnd(userId: string): Promise<void> {
   if (!notificationsSupported) return;
   await Notifications.cancelScheduledNotificationAsync(timerId(userId)).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(timerWarnId(userId)).catch(() => {});
 }

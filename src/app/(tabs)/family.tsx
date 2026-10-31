@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Screen, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { backend } from '@/lib/backend';
+import { visibleStreak } from '@/lib/rewards';
 import { doneTodayCount, resetDailyTasks } from '@/lib/taskOps';
 import type { Task } from '@/lib/types';
 import { useAppTheme } from '@/lib/useAppTheme';
@@ -11,6 +12,8 @@ import { useAppTheme } from '@/lib/useAppTheme';
 interface Summary {
   todo: number;
   doneToday: number;
+  stars: number;
+  streak: number;
 }
 
 /** Espace parents : vue d'ensemble des enfants suivis. */
@@ -32,8 +35,20 @@ export default function FamilyScreen() {
       (async () => {
         const entries = await Promise.all(
           children.map(async (c) => {
-            const tasks = resetDailyTasks(await backend.loadTasks(c.id).catch((): Task[] => []));
-            return [c.id, { todo: tasks.filter((t) => !t.done).length, doneToday: doneTodayCount(tasks) }] as const;
+            const [loaded, settings] = await Promise.all([
+              backend.loadTasks(c.id).catch((): Task[] => []),
+              backend.loadSettings(c.id).catch(() => null),
+            ]);
+            const tasks = resetDailyTasks(loaded);
+            return [
+              c.id,
+              {
+                todo: tasks.filter((t) => !t.done).length,
+                doneToday: doneTodayCount(tasks),
+                stars: settings?.stars ?? 0,
+                streak: settings ? visibleStreak(settings) : 0,
+              },
+            ] as const;
           }),
         );
         if (!cancelled) setSummaries(Object.fromEntries(entries));
@@ -85,6 +100,11 @@ export default function FamilyScreen() {
                         : `${s.doneToday} faite${s.doneToday > 1 ? 's' : ''} aujourd’hui · ${s.todo} à faire`
                       : '…'}
                   </Txt>
+                  {s ? (
+                    <Txt variant="small">
+                      ⭐ {s.stars} · 🔥 {s.streak} {s.streak > 1 ? 'jours' : 'jour'}
+                    </Txt>
+                  ) : null}
                 </View>
                 <Txt variant="subtitle" style={{ color: colors.primary }}>
                   ›
