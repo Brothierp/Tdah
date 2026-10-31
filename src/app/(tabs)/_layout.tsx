@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { Text } from 'react-native';
+import { useAuth } from '@/lib/auth';
 import { useTimer } from '@/lib/timer';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -10,6 +11,7 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 export default function TabsLayout() {
   const { colors } = useAppTheme();
   const timer = useTimer();
+  const { canSupervise, children } = useAuth();
   const timerActive = timer.status === 'running' || timer.status === 'paused';
 
   return (
@@ -32,6 +34,15 @@ export default function TabsLayout() {
           title: 'Timer',
           tabBarIcon: ({ focused }) => <TabIcon emoji="⏳" focused={focused} />,
           tabBarBadge: timerActive ? '●' : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="family"
+        options={{
+          title: 'Famille',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👨‍👩‍👧" focused={focused} />,
+          // Réservé aux comptes adultes (ou à ceux qui suivent déjà des enfants).
+          href: canSupervise || children.length > 0 ? undefined : null,
         }}
       />
       <Tabs.Screen

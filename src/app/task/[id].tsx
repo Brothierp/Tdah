@@ -1,12 +1,14 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { Button, Card, Chip, EmojiGrid, ErrorText, Field, RoundButton, Screen, Stepper, ToggleRow, Txt } from '@/components/ui';
 import { confirm } from '@/lib/confirm';
+import { useChildData } from '@/lib/childData';
 import { useData } from '@/lib/data';
+import type { TaskInput } from '@/lib/taskOps';
 import { ensurePermission, notificationsSupported } from '@/lib/notifications';
 import { TASK_EMOJIS } from '@/lib/theme';
-import type { ReminderRepeat } from '@/lib/types';
+import type { ReminderRepeat, Settings, Task } from '@/lib/types';
 
 const DURATIONS = [2, 5, 10, 15, 25, 45];
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -17,10 +19,48 @@ function defaultReminderDate() {
   return d;
 }
 
+interface TaskStore {
+  tasks: Task[];
+  settings: Settings;
+  addTask: (input: TaskInput) => Promise<unknown>;
+  updateTask: (id: string, input: TaskInput) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+}
+
+/**
+ * Créer (id = "new") ou modifier une tâche.
+ * Avec le paramètre `owner`, un parent agit sur la liste d'un de ses enfants.
+ */
 export default function TaskForm() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { tasks, addTask, updateTask, deleteTask, settings } = useData();
-  const existing = id !== 'new' ? tasks.find((t) => t.id === id) : undefined;
+  const { id, owner } = useLocalSearchParams<{ id: string; owner?: string }>();
+  const own = useData();
+  const childData = useChildData(owner ?? null);
+
+  if (owner && !childData.child) {
+    return (
+      <Screen edges={[]}>
+        <Txt>Ce compte ne fait pas partie de ta famille.</Txt>
+        <Button label="Retour" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
+  const store: TaskStore = owner ? childData : own;
+  if (owner && !childData.ready) return <ActivityIndicator style={{ marginTop: 40 }} />;
+
+  const existing = id !== 'new' ? store.tasks.find((t) => t.id === id) : undefined;
+  if (id !== 'new' && !existing) {
+    return (
+      <Screen edges={[]}>
+        <Txt>Cette tâche n’existe plus.</Txt>
+        <Button label="Retour" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
+  return <TaskFormInner existing={existing} store={store} ownerName={childData.child?.name ?? null} />;
+}
+
+function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store: TaskStore; ownerName: string | null }) {
+  const { addTask, updateTask, deleteTask, settings } = store;
 
   const initialDate = existing?.reminder.at ? new Date(existing.reminder.at) : defaultReminderDate();
   const isTomorrow = (d: Date) => d.toDateString() !== new Date().toDateString() && d > new Date();
@@ -36,15 +76,6 @@ export default function TaskForm() {
   const [repeat, setRepeat] = useState<ReminderRepeat>(existing?.reminder.repeat ?? 'none');
   const [nudge, setNudge] = useState(existing?.reminder.nudge ?? true);
   const [error, setError] = useState<string | null>(null);
-
-  if (id !== 'new' && !existing) {
-    return (
-      <Screen edges={[]}>
-        <Txt>Cette tâche n’existe plus.</Txt>
-        <Button label="Retour" onPress={() => router.back()} />
-      </Screen>
-    );
-  }
 
   const setIn = (minutes: number) => {
     const d = new Date(Date.now() + minutes * 60_000);
@@ -96,7 +127,11 @@ export default function TaskForm() {
 
   return (
     <Screen edges={['bottom']}>
-      <Stack.Screen options={{ title: existing ? 'Modifier la tâche' : 'Nouvelle tâche' }} />
+      <Stack.Screen
+        options={{
+          title: `${existing ? 'Modifier la tâche' : 'Nouvelle tâche'}${ownerName ? ` · ${ownerName}` : ''}`,
+        }}
+      />
 
       <Field label="Quoi ?" value={title} onChangeText={setTitle} placeholder="ex : Me brosser les dents" maxLength={80} autoFocus={!existing} />
 

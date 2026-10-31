@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RoundButton, Txt } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
 import { useTimer } from '@/lib/timer';
 import type { Task } from '@/lib/types';
@@ -43,6 +44,8 @@ export function TaskItem({
   const { colors, radius, fontScale } = useAppTheme();
   const { toggleStep, moveTask } = useData();
   const timer = useTimer();
+  const { parent } = useAuth();
+  const fromParent = parent && task.createdBy === parent.id ? parent : null;
   const [open, setOpen] = useState(false);
   const stepsDone = task.steps.filter((s) => s.done).length;
   const reminder = reminderLabel(task);
@@ -95,6 +98,11 @@ export function TaskItem({
             {task.title}
           </Txt>
           <View style={styles.meta}>
+            {fromParent ? (
+              <Txt variant="small">
+                {fromParent.avatar} de {fromParent.name}
+              </Txt>
+            ) : null}
             {task.durationMin ? <Txt variant="small">⏱ {task.durationMin} min</Txt> : null}
             {reminder ? <Txt variant="small">{reminder}</Txt> : null}
             {task.steps.length > 0 ? (

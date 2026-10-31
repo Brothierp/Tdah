@@ -32,6 +32,8 @@ function RootNavigator() {
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="task/[id]" options={{ presentation: 'modal', headerShown: true, title: 'Tâche' }} />
+        <Stack.Screen name="family/[childId]" options={{ headerShown: true, title: 'Enfant' }} />
+        <Stack.Screen name="family/add" options={{ presentation: 'modal', headerShown: true, title: 'Ajouter un enfant' }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

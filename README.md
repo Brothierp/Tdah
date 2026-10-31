@@ -16,6 +16,12 @@ enfants, ados et adultes, à s'organiser :
 - **Comptes** : chaque personne a son compte (prénom, identifiant, mot de passe, avatar) et
   ses propres tâches/réglages. L'écran d'accueil affiche les profils de l'appareil
   (pratique pour une tablette familiale).
+- **Espace parents (onglet Famille)** : un compte adulte peut créer le compte de son enfant,
+  ou relier un compte Enfant/Ado existant (avec le mot de passe de l'enfant). Le parent voit
+  la progression du jour, ajoute ou modifie des tâches et des rappels, réinitialise un mot de
+  passe oublié, arrête le suivi ou supprime le compte. L'enfant voit « Compte suivi par … »
+  dans ses Réglages et les tâches ajoutées par son parent sont marquées « de Maman ».
+  Un compte suivi ne peut pas se supprimer seul.
 - **Adapté à l'âge** : le profil Enfant / Ado / Adulte ajuste la taille du texte, les
   arrondis et le ton des messages.
 
@@ -41,12 +47,15 @@ Pour publier sur les stores : `npx eas-cli@latest build` (voir la doc EAS).
 src/
   app/                    écrans (Expo Router : chaque fichier = un écran)
     (auth)/               accueil / choix du profil, connexion, inscription
-    (tabs)/               Tâches, Timer, Réglages
-    task/[id].tsx         créer (id = "new") ou modifier une tâche
+    (tabs)/               Tâches, Timer, Famille (adultes), Réglages
+    task/[id].tsx         créer (id = "new") ou modifier une tâche (?owner=<enfant> pour un parent)
+    family/               ajouter un enfant, suivi d'un enfant
   components/             boutons, champs, carte de tâche, anneau du timer
   lib/
     auth.tsx              comptes (mots de passe hachés SHA-256 + sel)
     data.tsx              tâches et réglages du compte connecté
+    childData.ts          tâches d'un enfant, vues et modifiées par son parent
+    taskOps.ts            opérations sur les tâches, partagées par les deux
     notifications.ts      programmation des rappels et de l'alerte du timer
     timer.tsx             état du timer (basé sur l'heure de fin : fiable en arrière-plan)
     theme.ts              couleurs (clair/sombre) et adaptation à l'âge
@@ -63,4 +72,7 @@ src/
   où elles sont déjà faites) et sont reprogrammées à chaque ouverture de l'app.
 - Les rappels d'un compte continuent d'arriver après une déconnexion (utile sur une
   tablette partagée) ; ils sont supprimés avec le compte.
+- **Espace parents sur le même appareil uniquement** pour l'instant (stockage local). Pour
+  qu'un parent suive son enfant depuis son propre téléphone, il faudra le backend évoqué
+  ci-dessus.
 - Sur le web, les notifications ne sont pas disponibles.

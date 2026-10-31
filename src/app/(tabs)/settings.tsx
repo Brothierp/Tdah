@@ -12,7 +12,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const NUDGE_DELAYS = [5, 10, 15, 30];
 
 export default function SettingsScreen() {
-  const { user, updateProfile, logout, changePassword, deleteAccount } = useAuth();
+  const { user, parent, updateProfile, logout, changePassword, deleteAccount } = useAuth();
   const { settings, updateSettings } = useData();
   const { colors } = useAppTheme();
   const [name, setName] = useState(user?.name ?? '');
@@ -65,6 +65,17 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <Txt variant="title">⚙️ Réglages</Txt>
+
+      {parent && (
+        <Card style={{ gap: 4, backgroundColor: colors.primarySoft, borderColor: colors.primary }}>
+          <Txt variant="subtitle">
+            👀 Compte suivi par {parent.avatar} {parent.name}
+          </Txt>
+          <Txt variant="small">
+            {parent.name} peut voir tes tâches, en ajouter et t’aider si tu oublies ton mot de passe.
+          </Txt>
+        </Card>
+      )}
 
       <Card style={{ gap: 12 }}>
         <Txt variant="subtitle">👤 Mon profil</Txt>
@@ -185,12 +196,14 @@ export default function SettingsScreen() {
 
       <Button label="🚪 Se déconnecter" variant="secondary" onPress={logout} />
 
-      <Card style={{ gap: 10, borderColor: colors.danger }}>
-        <Txt variant="subtitle">Supprimer mon compte</Txt>
-        <Field label="Confirme avec ton mot de passe" value={deletePw} onChangeText={setDeletePw} secureTextEntry />
-        <ErrorText message={deleteError} />
-        <Button variant="danger" label="Supprimer définitivement" onPress={submitDelete} disabled={!deletePw} />
-      </Card>
+      {!parent && (
+        <Card style={{ gap: 10, borderColor: colors.danger }}>
+          <Txt variant="subtitle">Supprimer mon compte</Txt>
+          <Field label="Confirme avec ton mot de passe" value={deletePw} onChangeText={setDeletePw} secureTextEntry />
+          <ErrorText message={deleteError} />
+          <Button variant="danger" label="Supprimer définitivement" onPress={submitDelete} disabled={!deletePw} />
+        </Card>
+      )}
     </Screen>
   );
 }

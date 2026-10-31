@@ -10,6 +10,8 @@ export interface User {
   passwordHash: string;
   salt: string;
   createdAt: string;
+  /** Compte parent qui suit ce compte (enfant / ado). Absent pour les anciens comptes. */
+  parentId?: string | null;
 }
 
 /** Données publiques d'un compte (sans le mot de passe). */
@@ -39,6 +41,8 @@ export interface Task {
   done: boolean;
   doneAt: string | null;
   createdAt: string;
+  /** Identifiant du parent si la tâche a été ajoutée par lui (sinon null). */
+  createdBy?: string | null;
   /** Durée estimée en minutes (sert à lancer le timer). */
   durationMin: number | null;
   steps: Step[];

@@ -1,12 +1,22 @@
-import * as Crypto from 'expo-crypto';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import { initNotifications, syncReminders } from './notifications';
 import { keys, readJSON, writeJSON } from './storage';
-import { DEFAULT_SETTINGS, type Settings, type Step, type Task } from './types';
+import {
+  clearDoneIn,
+  createTask,
+  deleteTaskIn,
+  moveTaskIn,
+  resetDailyTasks,
+  toggleStepIn,
+  toggleTaskIn,
+  updateTaskIn,
+  type TaskInput,
+} from './taskOps';
+import { DEFAULT_SETTINGS, type Settings, type Task } from './types';
 
-export type TaskInput = Pick<Task, 'title' | 'emoji' | 'durationMin' | 'reminder'> & { steps: string[] };
+export type { TaskInput };
 
 interface DataContextValue {
   ready: boolean;
@@ -23,36 +33,6 @@ interface DataContextValue {
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
-
-function isToday(iso: string | null) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  const now = new Date();
-  return d.toDateString() === now.toDateString();
-}
-
-/** Les routines quotidiennes redeviennent « à faire » chaque nouveau jour. */
-function resetDailyTasks(tasks: Task[]): Task[] {
-  let changed = false;
-  const next = tasks.map((t) => {
-    if (t.reminder.repeat === 'daily' && t.done && !isToday(t.doneAt)) {
-      changed = true;
-      return { ...t, done: false, doneAt: null, steps: t.steps.map((s) => ({ ...s, done: false })) };
-    }
-    return t;
-  });
-  return changed ? next : tasks;
-}
-
-function buildSteps(titles: string[], previous: Step[] = []): Step[] {
-  return titles
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((title) => {
-      const existing = previous.find((s) => s.title === title);
-      return existing ?? { id: Crypto.randomUUID(), title, done: false };
-    });
-}
 
 /** Le store est remonté à chaque changement de compte : aucun état ne fuit d'un compte à l'autre. */
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -129,16 +109,8 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
   }, [ready, user, tasks, settings]);
 
   const addTask = useCallback<DataContextValue['addTask']>(
-    async ({ steps, ...input }) => {
-      const task: Task = {
-        ...input,
-        title: input.title.trim(),
-        id: Crypto.randomUUID(),
-        done: false,
-        doneAt: null,
-        createdAt: new Date().toISOString(),
-        steps: buildSteps(steps),
-      };
+    async (input) => {
+      const task = createTask(input);
       await saveTasks((prev) => [...prev, task]);
       return task;
     },
@@ -146,67 +118,34 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
   );
 
   const updateTask = useCallback<DataContextValue['updateTask']>(
-    (id, { steps, ...input }) =>
-      saveTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...input, title: input.title.trim(), steps: buildSteps(steps, t.steps) } : t)),
-      ),
+    (id, input) => saveTasks((prev) => updateTaskIn(prev, id, input)),
     [saveTasks],
   );
 
   const toggleTask = useCallback<DataContextValue['toggleTask']>(
     async (id) => {
       let nowDone = false;
-      await saveTasks((prev) =>
-        prev.map((t) => {
-          if (t.id !== id) return t;
-          nowDone = !t.done;
-          return {
-            ...t,
-            done: nowDone,
-            doneAt: nowDone ? new Date().toISOString() : null,
-            steps: nowDone ? t.steps.map((s) => ({ ...s, done: true })) : t.steps,
-          };
-        }),
-      );
+      await saveTasks((prev) => {
+        const result = toggleTaskIn(prev, id);
+        nowDone = result.nowDone;
+        return result.tasks;
+      });
       return nowDone;
     },
     [saveTasks],
   );
 
   const toggleStep = useCallback<DataContextValue['toggleStep']>(
-    (taskId, stepId) =>
-      saveTasks((prev) =>
-        prev.map((t) => {
-          if (t.id !== taskId) return t;
-          const steps = t.steps.map((s) => (s.id === stepId ? { ...s, done: !s.done } : s));
-          const allDone = steps.length > 0 && steps.every((s) => s.done);
-          return { ...t, steps, done: allDone, doneAt: allDone ? (t.doneAt ?? new Date().toISOString()) : null };
-        }),
-      ),
+    (taskId, stepId) => saveTasks((prev) => toggleStepIn(prev, taskId, stepId)),
     [saveTasks],
   );
 
-  const deleteTask = useCallback((id: string) => saveTasks((prev) => prev.filter((t) => t.id !== id)), [saveTasks]);
+  const deleteTask = useCallback((id: string) => saveTasks((prev) => deleteTaskIn(prev, id)), [saveTasks]);
 
-  const clearDone = useCallback(
-    // Les routines quotidiennes sont conservées : elles reviendront demain.
-    () => saveTasks((prev) => prev.filter((t) => !t.done || t.reminder.repeat === 'daily')),
-    [saveTasks],
-  );
+  const clearDone = useCallback(() => saveTasks(clearDoneIn), [saveTasks]);
 
   const moveTask = useCallback<DataContextValue['moveTask']>(
-    (id, direction) =>
-      saveTasks((prev) => {
-        const index = prev.findIndex((t) => t.id === id);
-        if (index < 0) return prev;
-        // On échange avec la tâche voisine visible dans la même liste (à faire / faites).
-        let target = index + direction;
-        while (target >= 0 && target < prev.length && prev[target].done !== prev[index].done) target += direction;
-        if (target < 0 || target >= prev.length) return prev;
-        const next = [...prev];
-        [next[index], next[target]] = [next[target], next[index]];
-        return next;
-      }),
+    (id, direction) => saveTasks((prev) => moveTaskIn(prev, id, direction)),
     [saveTasks],
   );
 
