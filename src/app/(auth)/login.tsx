@@ -5,13 +5,13 @@ import { Button, ErrorText, Field, Screen, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 
 export default function Login() {
-  const params = useLocalSearchParams<{ username?: string }>();
-  const { login, accounts } = useAuth();
-  const [username, setUsername] = useState(params.username ?? '');
+  const params = useLocalSearchParams<{ login?: string }>();
+  const { login, accounts, mode } = useAuth();
+  const [username, setUsername] = useState(params.login ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const known = accounts.find((a) => a.username === params.username);
+  const known = accounts.find((a) => a.login === params.login);
 
   const submit = async () => {
     setError(null);
@@ -33,13 +33,14 @@ export default function Login() {
         </View>
       ) : (
         <Field
-          label="Identifiant"
+          label={mode === 'cloud' ? 'E-mail (ou identifiant pour un enfant)' : 'Identifiant'}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
           autoCorrect={false}
-          autoComplete="username"
-          placeholder="ex : leo"
+          autoComplete={mode === 'cloud' ? 'email' : 'username'}
+          keyboardType={mode === 'cloud' ? 'email-address' : 'default'}
+          placeholder={mode === 'cloud' ? 'ex : prenom@mail.fr ou leo' : 'ex : leo'}
         />
       )}
       <Field

@@ -38,6 +38,7 @@ function RootNavigator() {
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Confidentialité' }} />
     </Stack>
   );
 }

@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from './auth';
 import { syncReminders } from './notifications';
-import { keys, readJSON, writeJSON } from './storage';
+import { backend } from './backend';
 import { createTask, deleteTaskIn, resetDailyTasks, updateTaskIn, type TaskInput } from './taskOps';
 import { DEFAULT_SETTINGS, type PublicUser, type Settings, type Task } from './types';
 
@@ -34,13 +34,10 @@ export function useChildData(childId: string | null): ChildData {
 
   const reload = useCallback(async () => {
     if (!childKey) return;
-    const [stored, storedSettings] = await Promise.all([
-      readJSON<Task[]>(keys.tasks(childKey), []),
-      readJSON<Partial<Settings>>(keys.settings(childKey), {}),
-    ]);
+    const [stored, storedSettings] = await Promise.all([backend.loadTasks(childKey), backend.loadSettings(childKey)]);
     const reset = resetDailyTasks(stored);
     tasksRef.current = reset;
-    settingsRef.current = { ...DEFAULT_SETTINGS, ...storedSettings };
+    settingsRef.current = storedSettings;
     setTasks(reset);
     setSettings(settingsRef.current);
     setReady(true);
@@ -55,11 +52,15 @@ export function useChildData(childId: string | null): ChildData {
   const save = useCallback(
     async (next: Task[]) => {
       if (!child) throw new Error("Ce compte ne fait pas partie de ta famille.");
+      const prev = tasksRef.current;
       tasksRef.current = next;
       setTasks(next);
-      await writeJSON(keys.tasks(child.id), next);
-      // Même appareil : on reprogramme tout de suite les rappels de l'enfant.
-      syncReminders(child, next, settingsRef.current).catch((e) => console.warn('Rappels enfant :', e));
+      await backend.saveTasks(child.id, prev, next);
+      // Mode local (même appareil) : on reprogramme tout de suite les rappels de l'enfant.
+      // Mode cloud : son téléphone les reprogramme à la prochaine ouverture de l'app.
+      if (backend.mode === 'local') {
+        syncReminders(child, next, settingsRef.current).catch((e) => console.warn('Rappels enfant :', e));
+      }
     },
     [child],
   );

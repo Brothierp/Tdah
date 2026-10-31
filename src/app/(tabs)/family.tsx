@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Screen, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { keys, readJSON } from '@/lib/storage';
+import { backend } from '@/lib/backend';
 import { doneTodayCount, resetDailyTasks } from '@/lib/taskOps';
 import type { Task } from '@/lib/types';
 import { useAppTheme } from '@/lib/useAppTheme';
@@ -15,9 +15,16 @@ interface Summary {
 
 /** Espace parents : vue d'ensemble des enfants suivis. */
 export default function FamilyScreen() {
-  const { children } = useAuth();
+  const { children, refreshFamily } = useAuth();
   const { colors, radius } = useAppTheme();
   const [summaries, setSummaries] = useState<Record<string, Summary>>({});
+
+  // Liste des enfants à jour (un enfant a pu être relié depuis un autre appareil).
+  useFocusEffect(
+    useCallback(() => {
+      refreshFamily().catch(() => {});
+    }, [refreshFamily]),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -25,7 +32,7 @@ export default function FamilyScreen() {
       (async () => {
         const entries = await Promise.all(
           children.map(async (c) => {
-            const tasks = resetDailyTasks(await readJSON<Task[]>(keys.tasks(c.id), []));
+            const tasks = resetDailyTasks(await backend.loadTasks(c.id).catch((): Task[] => []));
             return [c.id, { todo: tasks.filter((t) => !t.done).length, doneToday: doneTodayCount(tasks) }] as const;
           }),
         );

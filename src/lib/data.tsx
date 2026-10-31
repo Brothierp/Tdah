@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import { initNotifications, syncReminders } from './notifications';
-import { keys, readJSON, writeJSON } from './storage';
+import { backend } from './backend';
 import {
   clearDoneIn,
   createTask,
@@ -20,6 +20,7 @@ export type { TaskInput };
 
 interface DataContextValue {
   ready: boolean;
+  refresh: () => Promise<void>;
   tasks: Task[];
   settings: Settings;
   addTask: (input: TaskInput) => Promise<Task>;
@@ -55,49 +56,58 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
     initNotifications();
   }, []);
 
-  // Chargement des données du compte connecté.
-  useEffect(() => {
-    let cancelled = false;
-    if (!userId) return;
-    (async () => {
-      const [storedTasks, storedSettings] = await Promise.all([
-        readJSON<Task[]>(keys.tasks(userId), []),
-        readJSON<Partial<Settings>>(keys.settings(userId), {}),
-      ]);
-      if (cancelled) return;
-      const resetTasks = resetDailyTasks(storedTasks);
-      if (resetTasks !== storedTasks) await writeJSON(keys.tasks(userId), resetTasks);
-      tasksRef.current = resetTasks;
-      setTasks(resetTasks);
-      setSettings({ ...DEFAULT_SETTINGS, ...storedSettings });
-      setReady(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
   const saveTasks = useCallback(
     async (updater: (prev: Task[]) => Task[]) => {
       if (!userId) return;
-      const next = updater(tasksRef.current);
+      const prev = tasksRef.current;
+      const next = updater(prev);
+      if (next === prev) return;
       tasksRef.current = next;
       setTasks(next);
-      await writeJSON(keys.tasks(userId), next);
+      await backend.saveTasks(userId, prev, next);
     },
     [userId],
   );
 
-  // Au retour dans l'app : réinitialise les routines si on a changé de jour.
+  const fetchData = useCallback(
+    async () => (userId ? Promise.all([backend.loadTasks(userId), backend.loadSettings(userId)]) : null),
+    [userId],
+  );
+
+  const apply = useCallback(
+    async (data: [Task[], Settings] | null) => {
+      if (!data) return;
+      const [stored, storedSettings] = data;
+      tasksRef.current = stored;
+      setTasks(stored);
+      setSettings(storedSettings);
+      setReady(true);
+      // Les routines quotidiennes redeviennent « à faire » chaque nouveau jour.
+      const reset = resetDailyTasks(stored);
+      if (reset !== stored) await saveTasks(() => reset);
+    },
+    [saveTasks],
+  );
+
+  /** Recharge les données : au retour dans l'app et sur « tirer pour actualiser ». */
+  const refresh = useCallback(async () => apply(await fetchData()), [apply, fetchData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchData()
+      .then((data) => (cancelled ? undefined : apply(data)))
+      .catch((e) => console.warn('Chargement :', e));
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchData, apply]);
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && ready) {
-        const reset = resetDailyTasks(tasksRef.current);
-        if (reset !== tasksRef.current) saveTasks(() => reset);
-      }
+      if (state === 'active') refresh().catch(() => {});
     });
     return () => sub.remove();
-  }, [ready, saveTasks]);
+  }, [refresh]);
 
   // Reprogramme les rappels quand quelque chose change (avec un petit délai).
   useEffect(() => {
@@ -154,7 +164,7 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
       if (!userId) return;
       const next = { ...settings, ...patch };
       setSettings(next);
-      await writeJSON(keys.settings(userId), next);
+      await backend.saveSettings(userId, next);
     },
     [userId, settings],
   );
@@ -162,6 +172,7 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
   const value = useMemo(
     () => ({
       ready,
+      refresh,
       tasks,
       settings,
       addTask,
@@ -173,7 +184,7 @@ function DataStore({ userId, children }: { userId: string | null; children: Reac
       moveTask,
       updateSettings,
     }),
-    [ready, tasks, settings, addTask, updateTask, toggleTask, toggleStep, deleteTask, clearDone, moveTask, updateSettings],
+    [ready, refresh, tasks, settings, addTask, updateTask, toggleTask, toggleStep, deleteTask, clearDone, moveTask, updateSettings],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

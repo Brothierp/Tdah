@@ -98,3 +98,19 @@ export function moveTaskIn(tasks: Task[], id: string, direction: -1 | 1): Task[]
 export function doneTodayCount(tasks: Task[]): number {
   return tasks.filter((t) => t.done && isToday(t.doneAt)).length;
 }
+
+/**
+ * Différences entre deux versions de la liste (pour n'envoyer au serveur que ce qui a changé).
+ * Une tâche est renvoyée si elle est nouvelle, modifiée (nouvel objet) ou a changé de place.
+ */
+export function diffTasks(prev: Task[], next: Task[]): { upserts: { task: Task; position: number }[]; deletes: string[] } {
+  const prevIndex = new Map(prev.map((t, i) => [t.id, i]));
+  const upserts: { task: Task; position: number }[] = [];
+  next.forEach((task, position) => {
+    const i = prevIndex.get(task.id);
+    if (i === undefined || prev[i] !== task || i !== position) upserts.push({ task, position });
+  });
+  const nextIds = new Set(next.map((t) => t.id));
+  const deletes = prev.filter((t) => !nextIds.has(t.id)).map((t) => t.id);
+  return { upserts, deletes };
+}

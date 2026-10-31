@@ -1,7 +1,9 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Button, Card, Chip, EmojiGrid, ErrorText, Field, Screen, Stepper, ToggleRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { backend } from '@/lib/backend';
 import { confirm } from '@/lib/confirm';
 import { useData } from '@/lib/data';
 import { cancelAllForUser, ensurePermission, notificationsSupported } from '@/lib/notifications';
@@ -12,7 +14,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const NUDGE_DELAYS = [5, 10, 15, 30];
 
 export default function SettingsScreen() {
-  const { user, parent, updateProfile, logout, changePassword, deleteAccount } = useAuth();
+  const { user, parent, mode, updateProfile, logout, changePassword, deleteAccount } = useAuth();
   const { settings, updateSettings } = useData();
   const { colors } = useAppTheme();
   const [name, setName] = useState(user?.name ?? '');
@@ -24,8 +26,29 @@ export default function SettingsScreen() {
   const [deletePw, setDeletePw] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [permissionWarning, setPermissionWarning] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   if (!user) return null;
+
+  const saveProfile = (patch: Parameters<typeof updateProfile>[0]) => {
+    setProfileError(null);
+    updateProfile(patch).catch((e: Error) => setProfileError(e.message));
+  };
+
+  const submitLogout = async () => {
+    const pending = backend.pendingChanges();
+    if (
+      pending > 0 &&
+      !(await confirm(
+        'Modifications pas encore envoyées',
+        `${pending} modification(s) n’ont pas encore pu être envoyées (pas de connexion). Si tu te déconnectes maintenant, elles seront perdues.`,
+        'Me déconnecter quand même',
+      ))
+    ) {
+      return;
+    }
+    await logout();
+  };
 
   const toggleReminders = async (key: 'remindersEnabled' | 'dailySummaryEnabled', value: boolean) => {
     setPermissionWarning(null);
@@ -92,7 +115,7 @@ export default function SettingsScreen() {
               label="Prénom"
               value={name}
               onChangeText={setName}
-              onBlur={() => name.trim() && name.trim() !== user.name && updateProfile({ name })}
+              onBlur={() => name.trim() && name.trim() !== user.name && saveProfile({ name })}
               maxLength={30}
             />
           </View>
@@ -102,24 +125,27 @@ export default function SettingsScreen() {
             options={AVATARS}
             value={user.avatar}
             onChange={(avatar) => {
-              updateProfile({ avatar });
+              saveProfile({ avatar });
               setShowAvatars(false);
             }}
           />
         )}
         <Txt variant="muted">Affichage adapté pour :</Txt>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {AGE_GROUPS.map((g) => (
+          {AGE_GROUPS.filter((g) => !(parent && g.value === 'adulte')).map((g) => (
             <Chip
               key={g.value}
               label={`${g.emoji} ${g.label}`}
               selected={user.ageGroup === g.value}
-              onPress={() => updateProfile({ ageGroup: g.value })}
+              onPress={() => saveProfile({ ageGroup: g.value })}
             />
           ))}
         </View>
-        <Txt variant="small">Identifiant : {user.username}</Txt>
+        <Txt variant="small">{user.email ? `E-mail : ${user.email}` : `Identifiant : ${user.username}`}</Txt>
+        <ErrorText message={profileError} />
       </Card>
+
+      {mode === 'cloud' && !parent && user.ageGroup !== 'adulte' && <LinkCodeCard />}
 
       <Card style={{ gap: 8 }}>
         <Txt variant="subtitle">🔔 Rappels</Txt>
@@ -194,7 +220,7 @@ export default function SettingsScreen() {
         <Button variant="secondary" label="Changer le mot de passe" onPress={submitPassword} disabled={!pwCurrent || !pwNext} />
       </Card>
 
-      <Button label="🚪 Se déconnecter" variant="secondary" onPress={logout} />
+      <Button label="🚪 Se déconnecter" variant="secondary" onPress={submitLogout} />
 
       {!parent && (
         <Card style={{ gap: 10, borderColor: colors.danger }}>
@@ -204,6 +230,51 @@ export default function SettingsScreen() {
           <Button variant="danger" label="Supprimer définitivement" onPress={submitDelete} disabled={!deletePw} />
         </Card>
       )}
+      <Button variant="ghost" label="Politique de confidentialité" onPress={() => router.push('/privacy')} />
     </Screen>
+  );
+}
+
+/** Côté enfant / ado : code à donner au parent pour qu'il relie ce compte à sa famille. */
+function LinkCodeCard() {
+  const { createLinkCode } = useAuth();
+  const { colors } = useAppTheme();
+  const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const generate = async () => {
+    setError(null);
+    try {
+      setCode(await createLinkCode());
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const until = code ? new Date(code.expiresAt) : null;
+  return (
+    <Card style={{ gap: 10 }}>
+      <Txt variant="subtitle">👨‍👩‍👧 Relier mon compte à un parent</Txt>
+      <Txt variant="small">
+        Ton parent pourra voir tes tâches, t’en ajouter et t’aider si tu oublies ton mot de passe.
+      </Txt>
+      {code && until ? (
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text
+            selectable
+            accessibilityLabel={`Code ${code.code.split('').join(' ')}`}
+            style={{ fontSize: 40, fontWeight: '800', letterSpacing: 10, color: colors.primary }}
+          >
+            {code.code}
+          </Text>
+          <Txt variant="small">
+            À saisir dans l’onglet Famille de ton parent, avant {String(until.getHours()).padStart(2, '0')}:
+            {String(until.getMinutes()).padStart(2, '0')}.
+          </Txt>
+        </View>
+      ) : null}
+      <ErrorText message={error} />
+      <Button variant="secondary" label={code ? 'Nouveau code' : 'Obtenir un code'} onPress={generate} />
+    </Card>
   );
 }

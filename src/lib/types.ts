@@ -1,21 +1,26 @@
 export type AgeGroup = 'enfant' | 'ado' | 'adulte';
 
-export interface User {
+/** Compte tel que vu par l'app (sans secret). */
+export interface PublicUser {
   id: string;
   name: string;
-  /** Identifiant de connexion (unique sur l'appareil, en minuscules). */
-  username: string;
+  /** Identifiant de connexion sans e-mail (comptes locaux et comptes enfants). */
+  username: string | null;
+  /** E-mail de connexion (comptes cloud créés en libre-service). */
+  email?: string | null;
   avatar: string;
   ageGroup: AgeGroup;
-  passwordHash: string;
-  salt: string;
   createdAt: string;
-  /** Compte parent qui suit ce compte (enfant / ado). Absent pour les anciens comptes. */
+  /** Compte parent qui suit ce compte (enfant / ado). */
   parentId?: string | null;
 }
 
-/** Données publiques d'un compte (sans le mot de passe). */
-export type PublicUser = Omit<User, 'passwordHash' | 'salt'>;
+/** Compte stocké en mode local (avec l'empreinte du mot de passe). */
+export interface User extends PublicUser {
+  username: string;
+  passwordHash: string;
+  salt: string;
+}
 
 export interface Step {
   id: string;

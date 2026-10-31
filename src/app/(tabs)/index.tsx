@@ -17,7 +17,7 @@ function todayLabel() {
 
 export default function TasksScreen() {
   const { user } = useAuth();
-  const { tasks, toggleTask, clearDone, settings } = useData();
+  const { tasks, toggleTask, clearDone, settings, refresh } = useData();
   const timer = useTimer();
   const { colors, radius, playful } = useAppTheme();
   const [showDone, setShowDone] = useState(false);
@@ -52,7 +52,7 @@ export default function TasksScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen>
+      <Screen onRefresh={refresh}>
         <View style={{ gap: 2 }}>
           <Txt variant="title">
             {user.avatar} Salut {user.name} !

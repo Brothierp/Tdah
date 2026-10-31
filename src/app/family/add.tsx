@@ -8,11 +8,13 @@ import type { AgeGroup } from '@/lib/types';
 
 /** Ajouter un enfant : créer son compte, ou relier un compte existant. */
 export default function AddChild() {
-  const { createChild, linkChild } = useAuth();
+  const { createChild, linkChild, mode: backendMode } = useAuth();
+  const cloud = backendMode === 'cloud';
   const [mode, setMode] = useState<'create' | 'link'>('create');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [avatar, setAvatar] = useState(AVATARS[0]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup>('enfant');
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function AddChild() {
       const child =
         mode === 'create'
           ? await createChild({ name, username, password, avatar, ageGroup })
-          : await linkChild(username, password);
+          : await linkChild(cloud ? { code } : { username, password });
       router.replace(`/family/${child.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -67,6 +69,21 @@ export default function AddChild() {
             ))}
           </View>
         </>
+      ) : cloud ? (
+        <>
+          <Txt variant="muted">
+            Sur le téléphone de l’enfant (ou de l’ado) : Réglages › « Relier mon compte à un parent ». Un code à 6
+            chiffres s’affiche : saisis-le ici. Il est valable 15 minutes.
+          </Txt>
+          <Field
+            label="Code de liaison"
+            value={code}
+            onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            placeholder="123456"
+            style={{ fontSize: 28, letterSpacing: 8, textAlign: 'center' }}
+          />
+        </>
       ) : (
         <>
           <Txt variant="muted">
@@ -88,7 +105,7 @@ export default function AddChild() {
       <Button
         label={busy ? 'Un instant…' : mode === 'create' ? 'Créer le compte' : 'Relier le compte'}
         onPress={submit}
-        disabled={busy || !username || !password}
+        disabled={busy || (mode === 'link' && cloud ? code.length !== 6 : !username || !password)}
       />
     </Screen>
   );

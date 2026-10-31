@@ -14,7 +14,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 /** Suivi d'un enfant par son parent. */
 export default function ChildScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
-  const { child, ready, tasks, settings } = useChildData(childId);
+  const { child, ready, tasks, settings, reload } = useChildData(childId);
   const { unlinkChild, resetChildPassword, deleteChild } = useAuth();
   const { colors } = useAppTheme();
   const [newPassword, setNewPassword] = useState('');
@@ -71,7 +71,7 @@ export default function ChildScreen() {
   };
 
   return (
-    <Screen edges={['bottom']}>
+    <Screen edges={['bottom']} onRefresh={reload}>
       <Stack.Screen options={{ title: `${child.avatar} ${child.name}` }} />
 
       <Card style={{ gap: 6 }}>

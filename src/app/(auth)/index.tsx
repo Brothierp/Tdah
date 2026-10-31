@@ -28,7 +28,7 @@ export default function Welcome() {
                 key={a.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Se connecter en tant que ${a.name}`}
-                onPress={() => router.push({ pathname: '/login', params: { username: a.username } })}
+                onPress={() => router.push({ pathname: '/login', params: { login: a.login } })}
                 style={({ pressed }) => [
                   styles.profile,
                   { backgroundColor: colors.primarySoft, opacity: pressed ? 0.7 : 1 },
