@@ -42,3 +42,5 @@ yarn-error.*
 
 # variables d’environnement locales
 .env
+dist-web/
+dist-single/

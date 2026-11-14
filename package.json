@@ -42,7 +42,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test:backend": "node --test supabase/tests/*.test.mjs",
-    "test": "jest"
+    "test": "jest",
+    "build:web-single": "expo export --platform web --output-dir dist-web --clear && mkdir -p dist-single && node scripts/build-web-single.js dist-web dist-single/focus.html"
   },
   "private": true,
   "jest": {
