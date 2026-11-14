@@ -37,6 +37,7 @@ function RootNavigator() {
         <Stack.Screen name="family/[childId]" options={{ headerShown: true, title: 'Enfant' }} />
         <Stack.Screen name="family/add" options={{ presentation: 'modal', headerShown: true, title: 'Ajouter un enfant' }} />
         <Stack.Screen name="templates" options={{ presentation: 'modal', headerShown: true, title: 'Idées de routines' }} />
+        <Stack.Screen name="import" options={{ presentation: 'modal', headerShown: true, title: 'Importer' }} />
         <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
