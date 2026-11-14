@@ -32,6 +32,9 @@ des transitions annoncées, une motivation immédiate et un confort sensoriel r�
   réinitialise son mot de passe. L'enfant voit toujours que son compte est suivi.
 - **Adapté à l'âge** : Enfant / Ado / Adulte change la taille du texte, les formes, le ton et
   l'écran d'accueil par défaut.
+- **📲 Import depuis Reset 66** : le bouton « Envoyer dans Focus » de Reset 66 ouvre l'app sur
+  `focustdah://import?d=…` ; on voit les tâches du jour (moment, durée, étapes) et on les ajoute
+  d'un geste. Les tâches déjà présentes et pas encore faites ne sont pas dupliquées.
 - **Hors ligne** : tout reste utilisable sans réseau ; les modifications partent dès qu'il revient.
 
 ## Deux modes de fonctionnement
