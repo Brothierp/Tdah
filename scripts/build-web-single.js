@@ -31,6 +31,17 @@ const html = `<title>Focus</title>
 </style>
 <noscript>Active JavaScript pour utiliser Focus.</noscript>
 <div id="root"></div>
+<script>
+  // Lien de test « …#reinitialiser » : efface les données de Focus sur cet appareil et repart de zéro.
+  try {
+    if (location.hash === '#reinitialiser') {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('focus:') || k.startsWith('sb-'))
+        .forEach((k) => localStorage.removeItem(k));
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  } catch (e) {}
+</script>
 <script>${js}</script>
 `;
 fs.writeFileSync(outFile, html);
