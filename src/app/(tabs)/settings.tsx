@@ -148,15 +148,6 @@ export default function SettingsScreen() {
       {mode === 'cloud' && !parent && user.ageGroup !== 'adulte' && <LinkCodeCard />}
 
       <Section title="🌿 Affichage et confort">
-        <Txt style={{ fontWeight: '700' }}>Écran d’accueil</Txt>
-        <Segmented
-          value={settings.homeView ?? (user.ageGroup === 'enfant' ? 'focus' : 'list')}
-          onChange={(v) => updateSettings({ homeView: v })}
-          options={[
-            { value: 'focus', label: '🎯 Une à la fois' },
-            { value: 'list', label: '📋 Ma journée' },
-          ]}
-        />
         <Txt style={{ fontWeight: '700' }}>Taille du texte</Txt>
         <Segmented
           value={settings.textSize}

@@ -5,12 +5,11 @@ import { Button, Card, Screen, Segmented, ToggleRow, Txt } from '@/components/ui
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
 import { packsFor, packToInputs } from '@/lib/templates';
-import type { Settings } from '@/lib/types';
 import { useAppTheme } from '@/lib/useAppTheme';
 
-const STEPS = 4;
+const STEPS = 3;
 
-/** Accueil guidé : 4 écrans courts, une seule question par écran, et on peut tout passer. */
+/** Accueil guidé : 3 écrans courts, une seule question par écran, et on peut tout passer. */
 export default function Welcome() {
   const { user, canSupervise } = useAuth();
   const { settings, updateSettings, addTasks } = useData();
@@ -19,13 +18,12 @@ export default function Welcome() {
   const [packs, setPacks] = useState<string[]>([]);
   if (!user) return null;
 
-  const view: NonNullable<Settings['homeView']> = settings.homeView ?? (user.ageGroup === 'enfant' ? 'focus' : 'list');
   const suggestions = packsFor(user.ageGroup).slice(0, 4);
 
   const finish = async () => {
     const chosen = suggestions.filter((p) => packs.includes(p.id));
     if (chosen.length) await addTasks(chosen.flatMap(packToInputs));
-    await updateSettings({ onboarded: true, homeView: view });
+    await updateSettings({ onboarded: true });
     router.replace('/');
   };
 
@@ -70,40 +68,6 @@ export default function Welcome() {
 
       {step === 1 && (
         <View style={{ gap: 16 }}>
-          <Txt variant="title">Comment veux-tu voir ta journée ?</Txt>
-          <Txt variant="muted">Tu pourras changer à tout moment, en haut de l’écran.</Txt>
-          {(
-            [
-              ['focus', '🎯', 'Une chose à la fois', 'Une seule tâche à l’écran. Idéal pour ne pas se disperser.'],
-              ['list', '📋', 'Ma journée', 'Toutes les tâches, rangées par moment : matin, midi, après-midi, soir.'],
-            ] as const
-          ).map(([value, emoji, title, text]) => {
-            const selected = view === value;
-            return (
-              <Pressable
-                key={value}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                onPress={() => updateSettings({ homeView: value })}
-                style={[
-                  styles.choice,
-                  { borderRadius: radius, borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.card },
-                ]}
-              >
-                <Text style={{ fontSize: 40 }}>{emoji}</Text>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Txt variant="subtitle">{title}</Txt>
-                  <Txt variant="small">{text}</Txt>
-                </View>
-                <Text style={{ fontSize: 24 }}>{selected ? '✅' : '⚪'}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      {step === 2 && (
-        <View style={{ gap: 16 }}>
           <Txt variant="title">Ton confort</Txt>
           <Txt variant="muted">Pour que l’écran soit agréable à lire.</Txt>
           <Card style={{ gap: 12 }}>
@@ -136,7 +100,7 @@ export default function Welcome() {
         </View>
       )}
 
-      {step === 3 && (
+      {step === 2 && (
         <View style={{ gap: 16 }}>
           <Txt variant="title">Pour bien démarrer</Txt>
           <Txt variant="muted">Choisis des routines toutes prêtes (ou aucune). Tu pourras les modifier.</Txt>

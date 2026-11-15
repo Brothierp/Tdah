@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Chip, EmojiGrid, ErrorText, Field, Screen, Section, Stepper, ToggleRow, Txt } from '@/components/ui';
 import { useAppTheme } from '@/lib/useAppTheme';
+import { useTimer } from '@/lib/timer';
 import { confirm } from '@/lib/confirm';
 import { useChildData } from '@/lib/childData';
 import { useData } from '@/lib/data';
@@ -76,7 +77,8 @@ function TaskFormInner({
   const { addTask, updateTask, deleteTask, settings } = store;
   const { colors } = useAppTheme();
   const [showEmojis, setShowEmojis] = useState(false);
-  const { remove: removeWithUndo } = useTaskActions();
+  const { remove: removeWithUndo, toggle } = useTaskActions();
+  const timer = useTimer();
 
   const initialDate = existing?.reminder.at ? new Date(existing.reminder.at) : defaultReminderDate();
   const isTomorrow = (d: Date) => d.toDateString() !== new Date().toDateString() && d > new Date();
@@ -161,7 +163,6 @@ function TaskFormInner({
     }
   };
 
-  const hasOptions = !!existing && (existing.steps.length > 0 || existing.reminder.enabled || existing.durationMin != null || existing.reminder.repeat === 'daily');
 
   return (
     <Screen edges={['bottom']}>
@@ -170,6 +171,31 @@ function TaskFormInner({
           title: `${existing ? 'Modifier la tâche' : 'Nouvelle tâche'}${ownerName ? ` · ${ownerName}` : ''}`,
         }}
       />
+
+      {existing && !ownerName && !existing.done && (
+        <View style={styles.quick}>
+          <Button
+            variant="success"
+            label="✓ C’est fait"
+            style={{ flex: 1 }}
+            onPress={async () => {
+              router.back();
+              await toggle(existing);
+            }}
+          />
+          <Button
+            variant="secondary"
+            label={`▶ ${existing.durationMin ?? 5} min`}
+            accessibilityLabel="Lancer le timer"
+            style={{ flex: 1 }}
+            onPress={() => {
+              timer.start(existing.durationMin ?? 5, `${existing.emoji} ${existing.title}`, existing.id);
+              router.back();
+              router.navigate('/timer');
+            }}
+          />
+        </View>
+      )}
 
       {!existing && (
         <Button
@@ -200,7 +226,7 @@ function TaskFormInner({
         </View>
       </View>
 
-      <Section title="Plus d’options" initiallyOpen={hasOptions}>
+      <Section title="Plus d’options">
         <Txt variant="small">Image, durée, étapes, tous les jours, rappel. Tout est facultatif.</Txt>
 
         <View style={styles.inline}>
@@ -309,6 +335,7 @@ function TaskFormInner({
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quick: { flexDirection: 'row', gap: 10 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
 });
