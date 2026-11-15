@@ -55,7 +55,7 @@ export function Screen({
   );
 }
 
-type TxtVariant = 'title' | 'subtitle' | 'body' | 'muted' | 'small';
+type TxtVariant = 'title' | 'subtitle' | 'body' | 'muted' | 'small' | 'label';
 
 export function Txt({
   children,
@@ -75,6 +75,8 @@ export function Txt({
     body: { fontSize: 16, color: colors.text },
     muted: { fontSize: 15, color: colors.textMuted },
     small: { fontSize: 13, color: colors.textMuted },
+    /** Petit titre de section en capitales : structure la page sans l'alourdir. */
+    label: { fontSize: 13, fontWeight: '800', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' },
   };
   const v = base[variant];
   return (
@@ -87,7 +89,7 @@ export function Txt({
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { colors, radius } = useAppTheme();
   return (
-    <View style={[{ backgroundColor: colors.card, borderRadius: radius, padding: 16, borderWidth: 1, borderColor: colors.border }, style]}>
+    <View style={[{ backgroundColor: colors.card, borderRadius: radius, padding: 16 }, style]}>
       {children}
     </View>
   );
@@ -100,6 +102,7 @@ export function Button({
   disabled,
   style,
   accessibilityLabel,
+  size = 'md',
 }: {
   label: string;
   onPress: () => void;
@@ -107,8 +110,10 @@ export function Button({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  size?: 'md' | 'sm';
 }) {
   const { colors, radius, fontScale } = useAppTheme();
+  const small = size === 'sm';
   const palette = {
     primary: { bg: colors.primary, fg: colors.primaryText },
     secondary: { bg: colors.primarySoft, fg: colors.primary },
@@ -123,12 +128,12 @@ export function Button({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.button,
+        small ? styles.buttonSm : styles.button,
         { backgroundColor: palette.bg, borderRadius: radius, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 },
         style,
       ]}
     >
-      <Text style={{ color: palette.fg, fontSize: 17 * fontScale, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
+      <Text style={{ color: palette.fg, fontSize: (small ? 15 : 17) * fontScale, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -199,10 +204,10 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       onPress={onPress}
       style={[
         styles.chip,
-        { backgroundColor: selected ? colors.primary : colors.primarySoft, borderColor: selected ? colors.primary : colors.border },
+        { backgroundColor: selected ? colors.primary : colors.card, borderColor: selected ? colors.primary : colors.border },
       ]}
     >
-      <Text style={{ color: selected ? colors.primaryText : colors.primary, fontWeight: '700', fontSize: 15 * fontScale }}>{label}</Text>
+      <Text style={{ color: selected ? colors.primaryText : colors.text, fontWeight: selected ? '700' : '600', fontSize: 15 * fontScale }}>{label}</Text>
     </Pressable>
   );
 }
@@ -367,7 +372,7 @@ export function Section({
         <Txt variant="subtitle" style={{ flex: 1 }}>
           {title}
         </Txt>
-        <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>{open ? '−' : '+'}</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 18, fontWeight: '800' }}>{open ? '▾' : '▸'}</Text>
       </Pressable>
       {open ? <View style={{ gap: 12, paddingBottom: 12 }}>{children}</View> : null}
     </Card>
@@ -378,10 +383,38 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: 'row', padding: 4, gap: 4 },
   segment: { flex: 1, paddingVertical: 11, paddingHorizontal: 6, justifyContent: 'center' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', minHeight: 52, gap: 8 },
-  screen: { padding: 20, gap: 16, paddingBottom: 40, width: '100%', maxWidth: 640, alignSelf: 'center' },
-  button: { paddingVertical: 15, paddingHorizontal: 20, minHeight: 52, justifyContent: 'center' },
+  screen: { paddingHorizontal: 18, paddingTop: 16, gap: 18, paddingBottom: 110, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  button: { paddingVertical: 15, paddingHorizontal: 20, minHeight: 54, justifyContent: 'center' },
+  buttonSm: { paddingVertical: 9, paddingHorizontal: 14, minHeight: 40, justifyContent: 'center' },
+  fab: { position: 'absolute', right: 20, bottom: 20, width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });
+
+/** Bouton « + » flottant : toujours au même endroit, pour ajouter sans chercher. */
+export function Fab({ onPress, accessibilityLabel }: { onPress: () => void; accessibilityLabel: string }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fab,
+        {
+          backgroundColor: colors.primary,
+          opacity: pressed ? 0.85 : 1,
+          shadowColor: '#000',
+          shadowOpacity: 0.18,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
+        },
+      ]}
+    >
+      <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '600', marginTop: -2 }}>+</Text>
+    </Pressable>
+  );
+}

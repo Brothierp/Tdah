@@ -88,7 +88,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <Txt variant="title">⚙️ Réglages</Txt>
+      <Txt variant="title">Réglages</Txt>
 
       {parent && (
         <Card style={{ gap: 4, backgroundColor: colors.primarySoft, borderColor: colors.primary }}>

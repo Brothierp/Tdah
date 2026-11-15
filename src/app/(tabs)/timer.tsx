@@ -9,7 +9,7 @@ import { notificationsSupported } from '@/lib/notifications';
 import { formatDuration, useTimer } from '@/lib/timer';
 import { useAppTheme } from '@/lib/useAppTheme';
 
-const PRESETS = [2, 5, 10, 15, 25];
+const PRESETS = [1, 2, 5, 10, 15, 25];
 
 function clock(ms: number) {
   const d = new Date(ms);
@@ -30,40 +30,57 @@ export default function TimerScreen() {
     const suggestions = upcomingTasks(tasks).slice(0, 3);
     return (
       <Screen>
-        <Txt variant="title">⏳ Timer</Txt>
-        <Txt variant="muted">{playful ? 'Choisis, et c’est parti ! 🏁' : 'Le plus dur, c’est de commencer : choisis une durée courte.'}</Txt>
+        <Txt variant="title">Timer</Txt>
+        <Txt variant="muted">{playful ? 'Touche une durée, et c’est parti ! 🏁' : 'Touche une durée : le timer démarre tout de suite.'}</Txt>
+
+        <View style={{ gap: 10 }}>
+          <Txt variant="label">Choisis une durée</Txt>
+          <View style={styles.tiles}>
+            {PRESETS.map((m) => (
+              <Pressable
+                key={m}
+                accessibilityRole="button"
+                accessibilityLabel={`Démarrer ${m} minutes`}
+                onPress={() => timer.start(m, label.trim())}
+                style={({ pressed }) => [styles.tile, { backgroundColor: colors.card, borderRadius: radius, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={{ color: colors.primary, fontSize: 30 * fontScale, fontWeight: '800' }}>{m}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 14 * fontScale, fontWeight: '700' }}>min</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
         {suggestions.length > 0 && (
           <View style={{ gap: 10 }}>
-            <Txt variant="subtitle">Pour une tâche</Txt>
-            {suggestions.map((t) => (
-              <Button
-                key={t.id}
-                variant="secondary"
-                label={`▶ ${t.emoji} ${t.title} · ${t.durationMin ?? 5} min`}
-                onPress={() => timer.start(t.durationMin ?? 5, `${t.emoji} ${t.title}`, t.id)}
-              />
-            ))}
+            <Txt variant="label">Ou pour une tâche</Txt>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+              {suggestions.map((t, i) => (
+                <Pressable
+                  key={t.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Démarrer le timer pour ${t.title}`}
+                  onPress={() => timer.start(t.durationMin ?? 5, `${t.emoji} ${t.title}`, t.id)}
+                  style={({ pressed }) => [
+                    styles.taskRow,
+                    i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <Text style={{ fontSize: 22 }}>{t.emoji}</Text>
+                  <Txt style={{ flex: 1, fontWeight: '600' }} numberOfLines={1}>
+                    {t.title}
+                  </Txt>
+                  <View style={[styles.pill, { backgroundColor: colors.primarySoft }]}>
+                    <Text style={{ color: colors.primary, fontWeight: '800' }}>▶ {t.durationMin ?? 5} min</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </Card>
           </View>
         )}
 
-        <Txt variant="subtitle">Juste un timer</Txt>
-        <View style={styles.tiles}>
-          {PRESETS.map((m) => (
-            <Pressable
-              key={m}
-              accessibilityRole="button"
-              accessibilityLabel={`Démarrer ${m} minutes`}
-              onPress={() => timer.start(m, label.trim())}
-              style={({ pressed }) => [styles.tile, { backgroundColor: colors.primary, borderRadius: radius, opacity: pressed ? 0.8 : 1 }]}
-            >
-              <Text style={{ color: colors.primaryText, fontSize: 30 * fontScale, fontWeight: '800' }}>{m}</Text>
-              <Text style={{ color: colors.primaryText, fontSize: 14 * fontScale, fontWeight: '700' }}>min</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Section title="⚙️ Autre durée, nom du timer">
+        <Section title="Autre durée, nom du timer">
           <Field label="Pour quoi faire ? (optionnel)" value={label} onChangeText={setLabel} placeholder="ex : ranger mon bureau" maxLength={60} />
           <Stepper label="Minutes" value={minutes} onChange={setMinutes} min={1} max={120} />
           <Button label={`▶ Démarrer ${minutes} min`} onPress={() => timer.start(minutes, label.trim())} />
@@ -81,7 +98,7 @@ export default function TimerScreen() {
 
   return (
     <Screen>
-      <Txt variant="title">⏳ Timer</Txt>
+      <Txt variant="title">Timer</Txt>
       {timer.label ? (
         <Txt variant="subtitle" style={{ textAlign: 'center' }}>
           {timer.label}
@@ -171,5 +188,8 @@ export default function TimerScreen() {
 
 const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { width: 96, height: 86, alignItems: 'center', justifyContent: 'center' },
+  // 3 colonnes égales : grille régulière, pas de tuile isolée.
+  tile: { flexBasis: '30%', flexGrow: 1, height: 84, alignItems: 'center', justifyContent: 'center' },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
+  pill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
 });

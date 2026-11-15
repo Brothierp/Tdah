@@ -1,11 +1,10 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useFeedback } from '@/components/Feedback';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FocusCard } from '@/components/FocusCard';
-import { RewardBar } from '@/components/RewardBar';
-import { TaskItem } from '@/components/TaskItem';
-import { Button, Card, Screen, Segmented, Txt } from '@/components/ui';
+import { RewardGoal, RewardPill } from '@/components/RewardBar';
+import { TaskGroup, TaskItem } from '@/components/TaskItem';
+import { Button, Card, Fab, Screen, Segmented, Txt } from '@/components/ui';
 import { useTaskActions } from '@/components/useTaskActions';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
@@ -39,170 +38,128 @@ export default function TodayScreen() {
   const timerActive = timer.status === 'running' || timer.status === 'paused';
 
   return (
-    <Screen onRefresh={refresh}>
-      <View style={{ gap: 2 }}>
-        <Txt variant="title">
-          {user.avatar} Salut {user.name} !
-        </Txt>
-        <Txt variant="muted" style={{ textTransform: 'capitalize' }}>
-          {todayLabel()} · {momentLabel(now)}
-        </Txt>
-      </View>
-
-      <RewardBar />
-
-      {timerActive && (
-        <Pressable onPress={() => router.navigate('/timer')} accessibilityRole="button" accessibilityLabel="Ouvrir le timer">
-          <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-            <Text style={{ fontSize: 24 }}>⏳</Text>
-            <Txt style={{ flex: 1, fontWeight: '700' }} numberOfLines={1}>
-              {timer.label || 'Timer'} — {formatDuration(timer.remainingSec)}
-              {timer.status === 'paused' ? ' (pause)' : ''}
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Screen onRefresh={refresh}>
+        {/* En-tête : qui, quand, combien d'étoiles. Rien d'autre. */}
+        <View style={styles.header}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="title" numberOfLines={1}>
+              Salut {user.name} !
             </Txt>
-          </Card>
-        </Pressable>
-      )}
+            <Txt variant="muted" style={{ textTransform: 'capitalize' }}>
+              {todayLabel()} · {momentLabel(now)}
+            </Txt>
+          </View>
+          <RewardPill />
+        </View>
 
-      <Segmented
-        value={view}
-        onChange={(v) => updateSettings({ homeView: v })}
-        options={[
-          { value: 'focus', label: '🎯 Une à la fois' },
-          { value: 'list', label: '📋 Ma journée' },
-        ]}
-      />
+        <RewardGoal />
 
-      {view === 'focus' ? (
-        <>
-          <FocusCard upcoming={upcoming} />
-          <QuickAdd />
-        </>
-      ) : (
-        <>
-          <QuickAdd />
-
-          {tasks.length === 0 && (
-            <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 24 }}>
-              <Text style={{ fontSize: 48 }}>🌱</Text>
-              <Txt variant="subtitle">Rien pour l’instant</Txt>
-              <Txt variant="muted" style={{ textAlign: 'center' }}>
-                Écris une petite tâche ci-dessus, ou choisis une routine toute prête.
-              </Txt>
+        {timerActive && (
+          <Pressable onPress={() => router.navigate('/timer')} accessibilityRole="button" accessibilityLabel="Ouvrir le timer">
+            <Card style={[styles.timerBanner, { backgroundColor: colors.primary }]}>
+              <Text style={{ fontSize: 20 }}>⏳</Text>
+              <Text style={[styles.timerText, { color: colors.primaryText, flex: 1 }]} numberOfLines={1}>
+                {timer.label || 'Timer'}
+              </Text>
+              <Text style={[styles.timerText, { color: colors.primaryText, fontVariant: ['tabular-nums'] }]}>
+                {timer.status === 'paused' ? 'pause' : formatDuration(timer.remainingSec)}
+              </Text>
             </Card>
-          )}
+          </Pressable>
+        )}
 
-          {todo.length > 0 && (
-            <View
-              style={[styles.progress, { backgroundColor: colors.primarySoft, borderRadius: radius }]}
-              accessibilityLabel={`${done.length} tâches faites sur ${tasks.length}`}
-            >
+        <Segmented
+          value={view}
+          onChange={(v) => updateSettings({ homeView: v })}
+          options={[
+            { value: 'focus', label: '🎯 Une à la fois' },
+            { value: 'list', label: '📋 Ma journée' },
+          ]}
+        />
+
+        {view === 'focus' ? (
+          <FocusCard upcoming={upcoming} />
+        ) : tasks.length === 0 ? (
+          <Card style={{ alignItems: 'center', gap: 10, paddingVertical: 28 }}>
+            <Text style={{ fontSize: 44 }}>🌱</Text>
+            <Txt variant="subtitle">Ta journée est vide</Txt>
+            <Txt variant="muted" style={{ textAlign: 'center' }}>
+              Ajoute une petite tâche, ou commence avec une routine toute prête.
+            </Txt>
+            <Button label="💡 Choisir une routine" variant="secondary" onPress={() => router.push('/templates')} style={{ alignSelf: 'stretch' }} />
+          </Card>
+        ) : (
+          <>
+            <View style={{ gap: 8 }}>
+              <Txt variant="muted">
+                {todo.length === 0 ? 'Tout est fait 🎉' : `${done.length} sur ${tasks.length} faite${done.length > 1 ? 's' : ''}`}
+              </Txt>
               <View
-                style={{ width: `${(done.length / tasks.length) * 100}%`, height: '100%', backgroundColor: colors.success, borderRadius: radius }}
-              />
+                style={[styles.progress, { backgroundColor: colors.card, borderRadius: radius }]}
+                accessibilityLabel={`${done.length} tâches faites sur ${tasks.length}`}
+              >
+                <View style={{ width: `${(done.length / tasks.length) * 100}%`, height: '100%', backgroundColor: colors.success, borderRadius: radius }} />
+              </View>
             </View>
-          )}
 
-          {groupByMoment(todo).map((group) => (
-            <View key={group.moment ?? 'libre'} style={{ gap: 10 }}>
-              <View style={styles.groupHeader}>
-                <Txt variant="subtitle">{momentLabel(group.moment)}</Txt>
-                {group.moment === now && (
-                  <View style={[styles.nowBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 13 }}>MAINTENANT</Text>
-                  </View>
+            {groupByMoment(todo).map((group) => (
+              <View key={group.moment ?? 'libre'} style={{ gap: 8 }}>
+                <View style={styles.groupHeader}>
+                  <Txt variant="label" style={group.moment === now ? { color: colors.primary } : undefined}>
+                    {momentLabel(group.moment)}
+                  </Txt>
+                  {group.moment === now && (
+                    <Txt variant="label" style={{ color: colors.primary }}>
+                      · maintenant
+                    </Txt>
+                  )}
+                </View>
+                <TaskGroup>
+                  {group.tasks.map((t, i) => (
+                    <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === group.tasks.length - 1} />
+                  ))}
+                </TaskGroup>
+              </View>
+            ))}
+
+            {done.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showDone }}
+                  onPress={() => setShowDone((s) => !s)}
+                  style={styles.groupHeader}
+                >
+                  <Txt variant="label">
+                    {showDone ? '▾' : '▸'} Faites ({done.length})
+                  </Txt>
+                </Pressable>
+                {showDone && (
+                  <>
+                    <TaskGroup>
+                      {done.map((t, i) => (
+                        <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === done.length - 1} />
+                      ))}
+                    </TaskGroup>
+                    <Button variant="ghost" size="sm" label="Ranger les tâches faites" onPress={clearDone} />
+                  </>
                 )}
               </View>
-              {group.tasks.map((t, i) => (
-                <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === group.tasks.length - 1} />
-              ))}
-            </View>
-          ))}
+            )}
+          </>
+        )}
+      </Screen>
 
-          {done.length > 0 && (
-            <View style={{ gap: 12 }}>
-              <Button
-                variant="ghost"
-                label={`${showDone ? '▾' : '▸'} Faites (${done.length})`}
-                onPress={() => setShowDone((s) => !s)}
-                style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }}
-              />
-              {showDone && (
-                <>
-                  {done.map((t, i) => (
-                    <TaskItem key={t.id} task={t} onToggle={toggle} isFirst={i === 0} isLast={i === done.length - 1} />
-                  ))}
-                  <Button variant="secondary" label="🧹 Ranger les tâches faites" onPress={clearDone} />
-                  <Txt variant="small" style={{ textAlign: 'center' }}>
-                    Les routines de chaque jour sont gardées : elles reviennent demain.
-                  </Txt>
-                </>
-              )}
-            </View>
-          )}
-        </>
-      )}
-
-      <View style={styles.actions}>
-        <Button label="＋ Tâche détaillée" variant="secondary" onPress={() => router.push('/task/new')} style={{ flex: 1 }} />
-        <Button label="💡 Idées" variant="secondary" onPress={() => router.push('/templates')} style={{ flex: 1 }} />
-      </View>
-    </Screen>
-  );
-}
-
-/** Ajout rapide en une ligne : capturer une idée avant qu'elle s'envole. */
-function QuickAdd() {
-  const { addTask } = useData();
-  const { toast } = useFeedback();
-  const { colors, radius, fontScale } = useAppTheme();
-  const [title, setTitle] = useState('');
-
-  const submit = async () => {
-    const clean = title.trim();
-    if (!clean) return;
-    setTitle('');
-    await addTask({
-      title: clean,
-      emoji: '📝',
-      durationMin: null,
-      steps: [],
-      moment: null,
-      reminder: { enabled: false, at: null, repeat: 'none', nudge: true },
-    });
-    toast('Ajoutée ✔');
-  };
-
-  return (
-    <View style={[styles.quick, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius }]}>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        onSubmitEditing={submit}
-        placeholder="Ajouter vite une tâche…"
-        placeholderTextColor={colors.textMuted}
-        returnKeyType="done"
-        maxLength={80}
-        accessibilityLabel="Ajouter vite une tâche"
-        style={{ flex: 1, fontSize: 17 * fontScale, color: colors.text, paddingVertical: 12 }}
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Ajouter"
-        onPress={submit}
-        disabled={!title.trim()}
-        style={[styles.quickButton, { backgroundColor: title.trim() ? colors.primary : colors.primarySoft }]}
-      >
-        <Text style={{ color: title.trim() ? colors.primaryText : colors.primary, fontSize: 26, fontWeight: '800' }}>＋</Text>
-      </Pressable>
+      <Fab accessibilityLabel="Ajouter une tâche" onPress={() => router.push('/task/new')} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  progress: { height: 12, overflow: 'hidden' },
-  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  nowBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  actions: { flexDirection: 'row', gap: 10 },
-  quick: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 14, paddingRight: 6, borderWidth: 1 },
-  quickButton: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  timerBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  timerText: { fontSize: 17, fontWeight: '700' },
+  progress: { height: 8, overflow: 'hidden' },
+  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
 });

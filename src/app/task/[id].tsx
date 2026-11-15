@@ -1,7 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
-import { Button, Card, Chip, EmojiGrid, ErrorText, Field, RoundButton, Screen, Stepper, ToggleRow, Txt } from '@/components/ui';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, Chip, EmojiGrid, ErrorText, Field, Screen, Section, Stepper, ToggleRow, Txt } from '@/components/ui';
+import { useAppTheme } from '@/lib/useAppTheme';
 import { confirm } from '@/lib/confirm';
 import { useChildData } from '@/lib/childData';
 import { useData } from '@/lib/data';
@@ -12,7 +13,7 @@ import { useTaskActions } from '@/components/useTaskActions';
 import { ANYTIME, MOMENTS, momentInfo } from '@/lib/moments';
 import type { Moment, ReminderRepeat, Settings, Task } from '@/lib/types';
 
-const DURATIONS = [2, 5, 10, 15, 25, 45];
+const DURATIONS = [5, 10, 15, 25, 45];
 const pad = (n: number) => String(n).padStart(2, '0');
 
 function defaultReminderDate() {
@@ -58,11 +59,23 @@ export default function TaskForm() {
       </Screen>
     );
   }
-  return <TaskFormInner existing={existing} store={store} ownerName={childData.child?.name ?? null} />;
+  return <TaskFormInner existing={existing} store={store} ownerName={childData.child?.name ?? null} ownerId={owner ?? null} />;
 }
 
-function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store: TaskStore; ownerName: string | null }) {
+function TaskFormInner({
+  existing,
+  store,
+  ownerName,
+  ownerId,
+}: {
+  existing?: Task;
+  store: TaskStore;
+  ownerName: string | null;
+  ownerId: string | null;
+}) {
   const { addTask, updateTask, deleteTask, settings } = store;
+  const { colors } = useAppTheme();
+  const [showEmojis, setShowEmojis] = useState(false);
   const { remove: removeWithUndo } = useTaskActions();
 
   const initialDate = existing?.reminder.at ? new Date(existing.reminder.at) : defaultReminderDate();
@@ -148,6 +161,8 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
     }
   };
 
+  const hasOptions = !!existing && (existing.steps.length > 0 || existing.reminder.enabled || existing.durationMin != null || existing.reminder.repeat === 'daily');
+
   return (
     <Screen edges={['bottom']}>
       <Stack.Screen
@@ -156,77 +171,113 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
         }}
       />
 
-      <Field label="Quoi ?" value={title} onChangeText={setTitle} placeholder="ex : Me brosser les dents" maxLength={80} autoFocus={!existing} />
+      {!existing && (
+        <Button
+          variant="secondary"
+          label="💡 Choisir une routine toute prête"
+          onPress={() => router.replace(ownerId ? { pathname: '/templates', params: { owner: ownerId } } : '/templates')}
+        />
+      )}
 
-      <Card style={{ gap: 10 }}>
-        <Txt variant="subtitle">🗓️ Quand ?</Txt>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      <Field
+        label="Quoi ?"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="ex : Me brosser les dents"
+        maxLength={80}
+        autoFocus={!existing}
+        returnKeyType="done"
+        onSubmitEditing={save}
+      />
+
+      <View style={{ gap: 10 }}>
+        <Txt variant="muted">Quand ?</Txt>
+        <View style={styles.chips}>
           {MOMENTS.map((m) => (
             <Chip key={m.value} label={`${m.emoji} ${m.label}`} selected={moment === m.value} onPress={() => chooseMoment(m.value)} />
           ))}
           <Chip label={`${ANYTIME.emoji} ${ANYTIME.label}`} selected={moment === null} onPress={() => chooseMoment(null)} />
         </View>
+      </View>
+
+      <Section title="Plus d’options" initiallyOpen={hasOptions}>
+        <Txt variant="small">Image, durée, étapes, tous les jours, rappel. Tout est facultatif.</Txt>
+
+        <View style={styles.inline}>
+          <Text style={{ fontSize: 34 }}>{emoji}</Text>
+          <Txt style={{ flex: 1 }}>Image</Txt>
+          <Button size="sm" variant="secondary" label={showEmojis ? 'Fermer' : 'Changer'} onPress={() => setShowEmojis((v) => !v)} />
+        </View>
+        {showEmojis && (
+          <EmojiGrid
+            options={TASK_EMOJIS}
+            value={emoji}
+            onChange={(e) => {
+              setEmoji(e);
+              setShowEmojis(false);
+            }}
+          />
+        )}
+
+        <View style={{ gap: 8 }}>
+          <Txt>Durée (pour le timer)</Txt>
+          <View style={styles.chips}>
+            <Chip label="?" selected={duration === null} onPress={() => setDuration(null)} />
+            {DURATIONS.map((m) => (
+              <Chip key={m} label={`${m} min`} selected={duration === m} onPress={() => setDuration(m)} />
+            ))}
+          </View>
+        </View>
+
         <ToggleRow
-          label="🔁 Tous les jours"
-          description="Une routine : elle redevient « à faire » chaque matin."
+          label="Tous les jours"
+          description="Une routine : elle revient « à faire » chaque matin."
           value={repeat === 'daily'}
           onValueChange={(v) => setRepeat(v ? 'daily' : 'none')}
         />
-      </Card>
 
-      <View style={{ gap: 8 }}>
-        <Txt variant="muted">Une image pour la reconnaître</Txt>
-        <EmojiGrid options={TASK_EMOJIS} value={emoji} onChange={setEmoji} />
-      </View>
-
-      <View style={{ gap: 8 }}>
-        <Txt variant="muted">Combien de temps ? (pour le timer)</Txt>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Chip label="Je ne sais pas" selected={duration === null} onPress={() => setDuration(null)} />
-          {DURATIONS.map((m) => (
-            <Chip key={m} label={`${m} min`} selected={duration === m} onPress={() => setDuration(m)} />
-          ))}
-        </View>
-      </View>
-
-      <Card style={{ gap: 10 }}>
-        <Txt variant="subtitle">🪜 Petites étapes (optionnel)</Txt>
-        <Txt variant="small">Découper une grosse tâche en petits morceaux aide à se lancer.</Txt>
-        {steps.map((s, i) => (
-          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Field
-                label={`Étape ${i + 1}`}
-                value={s}
-                onChangeText={(v) => setSteps((prev) => prev.map((p, j) => (j === i ? v : p)))}
-                maxLength={80}
+        <View style={{ gap: 8 }}>
+          <Txt>Petites étapes</Txt>
+          <Txt variant="small">Découper une grosse tâche aide à se lancer.</Txt>
+          {steps.map((st, i) => (
+            <View key={i} style={styles.inline}>
+              <Txt variant="muted" style={{ width: 22 }}>
+                {i + 1}.
+              </Txt>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={st}
+                  onChangeText={(v) => setSteps((prev) => prev.map((x, j) => (j === i ? v : x)))}
+                  placeholder={`Étape ${i + 1}`}
+                  placeholderTextColor={colors.textMuted}
+                  maxLength={80}
+                  accessibilityLabel={`Étape ${i + 1}`}
+                  style={[styles.stepInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                />
+              </View>
+              <Button
+                size="sm"
+                variant="ghost"
+                label="✕"
+                accessibilityLabel={`Retirer l'étape ${i + 1}`}
+                onPress={() => setSteps((prev) => prev.filter((_, j) => j !== i))}
               />
             </View>
-            <RoundButton
-              label="✕"
-              accessibilityLabel={`Retirer l'étape ${i + 1}`}
-              onPress={() => setSteps((prev) => prev.filter((_, j) => j !== i))}
-              size={44}
-            />
-          </View>
-        ))}
-        <Button variant="secondary" label="＋ Ajouter une étape" onPress={() => setSteps((prev) => [...prev, ''])} />
-      </Card>
+          ))}
+          <Button size="sm" variant="secondary" label="+ Ajouter une étape" onPress={() => setSteps((prev) => [...prev, ''])} />
+        </View>
 
-      <Card style={{ gap: 12 }}>
         <ToggleRow
-          label="🔔 Me le rappeler"
-          description={
-            settings.remindersEnabled ? 'Une notification au bon moment.' : 'Les rappels sont coupés dans les Réglages.'
-          }
+          label="Me le rappeler"
+          description={settings.remindersEnabled ? 'Une notification au bon moment.' : 'Les rappels sont coupés dans les Réglages.'}
           value={reminderOn}
           onValueChange={setReminderOn}
         />
         {reminderOn && (
-          <>
+          <View style={{ gap: 12 }}>
             {repeat === 'none' && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                <Chip label="Aujourd'hui" selected={!tomorrow} onPress={() => setTomorrow(false)} />
+              <View style={styles.chips}>
+                <Chip label="Aujourd’hui" selected={!tomorrow} onPress={() => setTomorrow(false)} />
                 <Chip label="Demain" selected={tomorrow} onPress={() => setTomorrow(true)} />
                 <Chip label="Dans 15 min" onPress={() => setIn(15)} />
                 <Chip label="Dans 1 h" onPress={() => setIn(60)} />
@@ -237,21 +288,27 @@ function TaskFormInner({ existing, store, ownerName }: { existing?: Task; store:
               <Stepper label="Minutes" value={minute} onChange={setMinute} min={0} max={55} step={5} format={pad} />
             </View>
             <Txt variant="muted" style={{ textAlign: 'center' }}>
-              {repeat === 'daily' ? 'Tous les jours' : tomorrow ? 'Demain' : "Aujourd'hui"} à {pad(hour)}:{pad(minute)}
+              {repeat === 'daily' ? 'Tous les jours' : tomorrow ? 'Demain' : 'Aujourd’hui'} à {pad(hour)}:{pad(minute)}
             </Txt>
             <ToggleRow
-              label="⏰ Relancer si pas fait"
-              description={`Nouveau rappel ${settings.nudgeDelayMin} min après, si la tâche n'est pas cochée.`}
+              label="Relancer si pas fait"
+              description={`Nouveau rappel ${settings.nudgeDelayMin} min après, si la tâche n’est pas cochée.`}
               value={nudge}
               onValueChange={setNudge}
             />
-          </>
+          </View>
         )}
-      </Card>
+      </Section>
 
       <ErrorText message={error} />
       <Button label={existing ? 'Enregistrer' : 'Ajouter la tâche'} onPress={save} />
-      {existing && <Button variant="ghost" label="🗑 Supprimer la tâche" onPress={remove} />}
+      {existing && <Button variant="ghost" label="Supprimer la tâche" onPress={remove} />}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stepInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
+});

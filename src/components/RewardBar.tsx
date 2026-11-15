@@ -4,72 +4,64 @@ import { rewardProgress, visibleStreak } from '@/lib/rewards';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { Button, Card, Txt } from './ui';
 
-/** Étoiles, série de jours et objectif de récompense : motivation immédiate et visible. */
-export function RewardBar() {
+/** Petite pastille d'en-tête : étoiles (et série de jours quand il y en a une). */
+export function RewardPill() {
+  const { settings } = useData();
+  const { colors } = useAppTheme();
+  const streak = visibleStreak(settings);
+  return (
+    <View
+      style={[styles.pill, { backgroundColor: colors.card }]}
+      accessibilityLabel={`${settings.stars} étoiles${streak > 1 ? `, série de ${streak} jours` : ''}`}
+    >
+      <Text style={styles.pillText}>⭐</Text>
+      <Text style={[styles.pillText, { color: colors.text, fontWeight: '800' }]}>{settings.stars}</Text>
+      {streak > 1 ? (
+        <>
+          <Text style={[styles.pillText, { color: colors.textMuted }]}> · 🔥</Text>
+          <Text style={[styles.pillText, { color: colors.text, fontWeight: '800' }]}>{streak}</Text>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+/** Objectif de récompense : affiché seulement s'il y en a un, en une ligne. */
+export function RewardGoal() {
   const { settings, updateSettings } = useData();
   const { colors, radius } = useAppTheme();
-  const streak = visibleStreak(settings);
   const { available, goal, reached } = rewardProgress(settings);
+  if (!goal) return null;
+
+  if (reached) {
+    return (
+      <Card style={{ gap: 10, backgroundColor: colors.successSoft }}>
+        <Txt style={{ fontWeight: '700', textAlign: 'center' }}>🎉 Tu as gagné : {settings.rewardLabel || 'ta récompense'} !</Txt>
+        <Button variant="success" size="sm" label="J’ai eu ma récompense" onPress={() => updateSettings({ rewardSpent: settings.rewardSpent + goal })} />
+      </Card>
+    );
+  }
 
   return (
-    <Card style={{ gap: 10, paddingVertical: 12 }}>
-      <View style={styles.row}>
-        <View style={styles.stat} accessibilityLabel={`${settings.stars} étoiles`}>
-          <Text style={styles.icon}>⭐</Text>
-          <Txt variant="subtitle">{settings.stars}</Txt>
-        </View>
-        <View style={styles.stat} accessibilityLabel={`Série de ${streak} jours`}>
-          <Text style={styles.icon}>🔥</Text>
-          <Txt variant="subtitle">
-            {streak} {streak > 1 ? 'jours' : 'jour'}
-          </Txt>
-        </View>
-        {goal ? (
-          <View style={[styles.stat, { flex: 1, justifyContent: 'flex-end' }]}>
-            <Text style={styles.icon}>🎁</Text>
-            <Txt variant="small" numberOfLines={1} style={{ flexShrink: 1 }}>
-              {Math.min(available, goal)}/{goal}
-            </Txt>
-          </View>
-        ) : null}
-      </View>
-
-      {goal ? (
-        <View style={[styles.bar, { backgroundColor: colors.primarySoft, borderRadius: radius }]}>
-          <View
-            style={{
-              width: `${Math.min(1, available / goal) * 100}%`,
-              height: '100%',
-              backgroundColor: reached ? colors.success : colors.warning,
-              borderRadius: radius,
-            }}
-          />
-        </View>
-      ) : null}
-
-      {reached ? (
-        <View style={{ gap: 8 }}>
-          <Txt style={{ fontWeight: '700', textAlign: 'center' }}>
-            🎉 Tu as gagné : {settings.rewardLabel || 'ta récompense'} !
-          </Txt>
-          <Button
-            variant="success"
-            label="J’ai eu ma récompense"
-            onPress={() => updateSettings({ rewardSpent: settings.rewardSpent + (goal ?? 0) })}
-          />
-        </View>
-      ) : goal && settings.rewardLabel ? (
-        <Txt variant="small" style={{ textAlign: 'center' }}>
-          Objectif : {settings.rewardLabel}
+    <View style={{ gap: 6 }}>
+      <View style={styles.goalRow}>
+        <Txt variant="small" numberOfLines={1} style={{ flex: 1 }}>
+          🎁 {settings.rewardLabel ? `Objectif : ${settings.rewardLabel}` : 'Objectif'}
         </Txt>
-      ) : null}
-    </Card>
+        <Txt variant="small" style={{ fontVariant: ['tabular-nums'] }}>
+          {available}/{goal} ⭐
+        </Txt>
+      </View>
+      <View style={[styles.bar, { backgroundColor: colors.card, borderRadius: radius }]}>
+        <View style={{ width: `${Math.min(1, available / goal) * 100}%`, height: '100%', backgroundColor: colors.warning, borderRadius: radius }} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  icon: { fontSize: 22 },
-  bar: { height: 12, overflow: 'hidden' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  pillText: { fontSize: 16 },
+  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  bar: { height: 8, overflow: 'hidden' },
 });

@@ -8,24 +8,24 @@ import { Button, Card, Txt } from './ui';
 import { useTaskActions } from './useTaskActions';
 
 /**
- * Mode « Une chose à la fois » : une seule tâche à l'écran, une seule étape à la fois,
- * trois gros boutons. On montre aussi ce qui vient ensuite (prévisibilité).
+ * Mode « Une chose à la fois » : une seule tâche, une seule étape, UN seul gros bouton.
+ * Le timer et « Plus tard » restent à portée, en plus discret. La suite est annoncée.
  */
 export function FocusCard({ upcoming }: { upcoming: Task[] }) {
-  const { colors, radius, fontScale, playful } = useAppTheme();
+  const { colors, fontScale, playful } = useAppTheme();
   const { toggle, completeStep, postpone } = useTaskActions();
   const timer = useTimer();
   const task = upcoming[0];
 
   if (!task) {
     return (
-      <Card style={{ alignItems: 'center', gap: 10, paddingVertical: 32 }}>
-        <Text style={{ fontSize: 64 }}>🏆</Text>
+      <Card style={{ alignItems: 'center', gap: 10, paddingVertical: 36 }}>
+        <Text style={{ fontSize: 56 }}>🏆</Text>
         <Txt variant="title" style={{ textAlign: 'center' }}>
           {playful ? 'Tout est fait, bravo !' : 'Tout est fait.'}
         </Txt>
         <Txt variant="muted" style={{ textAlign: 'center' }}>
-          Profite de ton temps libre. Tu peux aussi ajouter une nouvelle tâche.
+          Profite de ton temps libre. Le bouton + permet d’ajouter une tâche.
         </Txt>
       </Card>
     );
@@ -35,30 +35,29 @@ export function FocusCard({ upcoming }: { upcoming: Task[] }) {
   const step = stepIndex >= 0 ? task.steps[stepIndex] : null;
   const next = upcoming[1];
   const timerOnThis = timer.taskId === task.id && (timer.status === 'running' || timer.status === 'paused');
+  const minutes = task.durationMin ?? 5;
 
   const start = () => {
-    if (!timerOnThis) timer.start(task.durationMin ?? 5, `${task.emoji} ${task.title}`, task.id);
+    if (!timerOnThis) timer.start(minutes, `${task.emoji} ${task.title}`, task.id);
     router.navigate('/timer');
   };
 
   return (
     <View style={{ gap: 12 }}>
-      <View
-        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.primary, borderRadius: radius * 1.3 }]}
-        accessibilityLabel={`Maintenant : ${task.title}`}
-      >
-        <Txt variant="small" style={{ fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <Card style={styles.card}>
+        <Txt variant="label" style={{ color: colors.primary }}>
           Maintenant · {momentLabel(task.moment)}
         </Txt>
-        <Text style={{ fontSize: 72 }}>{task.emoji}</Text>
-        <Txt variant="title" style={{ textAlign: 'center', fontSize: 30 * fontScale }}>
+        <Text style={{ fontSize: 56 }} accessibilityElementsHidden>
+          {task.emoji}
+        </Text>
+        <Txt variant="title" style={{ textAlign: 'center', fontSize: 26 * fontScale }}>
           {task.title}
         </Txt>
-        {task.durationMin ? <Txt variant="muted">⏱ environ {task.durationMin} min</Txt> : null}
 
-        {step && (
-          <View style={[styles.step, { backgroundColor: colors.primarySoft, borderRadius: radius }]}>
-            <Txt variant="small" style={{ fontWeight: '700' }}>
+        {step ? (
+          <View style={[styles.step, { backgroundColor: colors.background }]}>
+            <Txt variant="small">
               Étape {stepIndex + 1} sur {task.steps.length}
             </Txt>
             <Txt variant="subtitle" style={{ textAlign: 'center' }}>
@@ -66,38 +65,46 @@ export function FocusCard({ upcoming }: { upcoming: Task[] }) {
             </Txt>
             <View style={styles.dots} accessibilityElementsHidden>
               {task.steps.map((s) => (
-                <View
-                  key={s.id}
-                  style={[styles.dot, { backgroundColor: s.done ? colors.success : s.id === step.id ? colors.primary : colors.border }]}
-                />
+                <View key={s.id} style={[styles.dot, { backgroundColor: s.done ? colors.success : s.id === step.id ? colors.primary : colors.border }]} />
               ))}
             </View>
-            <Button label="✓ Étape faite" variant="secondary" onPress={() => completeStep(task, step)} style={{ alignSelf: 'stretch' }} />
           </View>
-        )}
-      </View>
+        ) : task.durationMin ? (
+          <Txt variant="muted">environ {task.durationMin} min</Txt>
+        ) : null}
 
-      <Button label={timerOnThis ? '⏳ Voir le timer' : `▶ Commencer${task.durationMin ? ` (${task.durationMin} min)` : ''}`} onPress={start} />
-      <Button label="✅ C'est fait !" variant="success" onPress={() => toggle(task)} />
-      {upcoming.length > 1 && <Button label="⏭ Plus tard" variant="ghost" onPress={() => postpone(task)} />}
+        <View style={styles.actions}>
+          {step ? (
+            <Button label="✓ Étape faite" variant="success" onPress={() => completeStep(task, step)} />
+          ) : (
+            <Button label="✓ C'est fait !" variant="success" onPress={() => toggle(task)} />
+          )}
+          <Button
+            variant="secondary"
+            label={timerOnThis ? 'Voir le timer' : `▶ Lancer le timer · ${minutes} min`}
+            onPress={start}
+          />
+          <View style={styles.links}>
+            {upcoming.length > 1 && <Button variant="ghost" size="sm" label="Plus tard" onPress={() => postpone(task)} />}
+            {step && <Button variant="ghost" size="sm" label="Toute la tâche est faite" onPress={() => toggle(task)} />}
+          </View>
+        </View>
+      </Card>
 
       {next && (
-        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}>
-          <Txt variant="muted">Ensuite :</Txt>
-          <Text style={{ fontSize: 22 }}>{next.emoji}</Text>
-          <Txt style={{ flex: 1, fontWeight: '600' }} numberOfLines={1}>
-            {next.title}
-          </Txt>
-          {upcoming.length > 2 && <Txt variant="small">+{upcoming.length - 2}</Txt>}
-        </Card>
+        <Txt variant="muted" style={{ textAlign: 'center' }} numberOfLines={1}>
+          Ensuite : {next.emoji} {next.title}
+        </Txt>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 10, padding: 22, borderWidth: 2 },
-  step: { alignSelf: 'stretch', alignItems: 'center', gap: 8, padding: 14, marginTop: 6 },
-  dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  card: { alignItems: 'center', gap: 10, paddingVertical: 22 },
+  step: { alignSelf: 'stretch', alignItems: 'center', gap: 6, padding: 14, borderRadius: 14, marginTop: 4 },
+  dots: { flexDirection: 'row', gap: 6, marginTop: 2 },
+  dot: { width: 9, height: 9, borderRadius: 5 },
+  actions: { alignSelf: 'stretch', gap: 10, marginTop: 8 },
+  links: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4 },
 });
