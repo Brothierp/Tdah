@@ -418,3 +418,13 @@ export function Fab({ onPress, accessibilityLabel }: { onPress: () => void; acce
     </Pressable>
   );
 }
+
+/** Lien « Retour » en haut des écrans qui ne sont pas des onglets (timer, famille). */
+export function BackLink({ label = 'Retour', onPress }: { label?: string; onPress: () => void }) {
+  const { colors, fontScale } = useAppTheme();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={10} style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
+      <Text style={{ color: colors.primary, fontSize: 17 * fontScale, fontWeight: '700' }}>‹ {label}</Text>
+    </Pressable>
+  );
+}

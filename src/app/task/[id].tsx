@@ -11,7 +11,7 @@ import type { TaskInput } from '@/lib/taskOps';
 import { ensurePermission, notificationsSupported } from '@/lib/notifications';
 import { TASK_EMOJIS } from '@/lib/theme';
 import { useTaskActions } from '@/components/useTaskActions';
-import { ANYTIME, MOMENTS, momentInfo } from '@/lib/moments';
+import { momentInfo, ROUTINE_TABS, tabInfo, tabOf, type RoutineTab } from '@/lib/moments';
 import type { Moment, ReminderRepeat, Settings, Task } from '@/lib/types';
 
 const DURATIONS = [5, 10, 15, 25, 45];
@@ -36,7 +36,7 @@ interface TaskStore {
  * Avec le paramètre `owner`, un parent agit sur la liste d'un de ses enfants.
  */
 export default function TaskForm() {
-  const { id, owner } = useLocalSearchParams<{ id: string; owner?: string }>();
+  const { id, owner, tab } = useLocalSearchParams<{ id: string; owner?: string; tab?: RoutineTab }>();
   const own = useData();
   const childData = useChildData(owner ?? null);
 
@@ -60,7 +60,7 @@ export default function TaskForm() {
       </Screen>
     );
   }
-  return <TaskFormInner existing={existing} store={store} ownerName={childData.child?.name ?? null} ownerId={owner ?? null} />;
+  return <TaskFormInner existing={existing} store={store} ownerName={childData.child?.name ?? null} ownerId={owner ?? null} defaultTab={tab} />;
 }
 
 function TaskFormInner({
@@ -68,11 +68,13 @@ function TaskFormInner({
   store,
   ownerName,
   ownerId,
+  defaultTab,
 }: {
   existing?: Task;
   store: TaskStore;
   ownerName: string | null;
   ownerId: string | null;
+  defaultTab?: RoutineTab;
 }) {
   const { addTask, updateTask, deleteTask, settings } = store;
   const { colors } = useAppTheme();
@@ -93,7 +95,8 @@ function TaskFormInner({
   const [minute, setMinute] = useState(initialDate.getMinutes());
   const [repeat, setRepeat] = useState<ReminderRepeat>(existing?.reminder.repeat ?? 'none');
   const [nudge, setNudge] = useState(existing?.reminder.nudge ?? true);
-  const [moment, setMoment] = useState<Moment | null>(existing?.moment ?? null);
+  // Nouvelle tâche : le moment de l'onglet d'où l'on vient (matin, journée ou soir).
+  const [moment, setMoment] = useState<Moment | null>(existing ? (existing.moment ?? null) : defaultTab ? tabInfo(defaultTab).moment : null);
 
   const chooseMoment = (m: Moment | null) => {
     setMoment(m);
@@ -200,7 +203,7 @@ function TaskFormInner({
       {!existing && (
         <Button
           variant="secondary"
-          label="💡 Choisir une routine toute prête"
+          label="💡 Routine toute prête"
           onPress={() => router.replace(ownerId ? { pathname: '/templates', params: { owner: ownerId } } : '/templates')}
         />
       )}
@@ -219,10 +222,14 @@ function TaskFormInner({
       <View style={{ gap: 10 }}>
         <Txt variant="muted">Quand ?</Txt>
         <View style={styles.chips}>
-          {MOMENTS.map((m) => (
-            <Chip key={m.value} label={`${m.emoji} ${m.label}`} selected={moment === m.value} onPress={() => chooseMoment(m.value)} />
+          {ROUTINE_TABS.map((t) => (
+            <Chip
+              key={t.key}
+              label={`${t.emoji} ${t.short}`}
+              selected={tabOf(moment) === t.key}
+              onPress={() => tabOf(moment) !== t.key && chooseMoment(t.moment)}
+            />
           ))}
-          <Chip label={`${ANYTIME.emoji} ${ANYTIME.label}`} selected={moment === null} onPress={() => chooseMoment(null)} />
         </View>
       </View>
 

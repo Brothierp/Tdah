@@ -14,7 +14,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const NUDGE_DELAYS = [5, 10, 15, 30];
 
 export default function SettingsScreen() {
-  const { user, parent, mode, updateProfile, logout, changePassword, deleteAccount } = useAuth();
+  const { user, parent, mode, canSupervise, children, updateProfile, logout, changePassword, deleteAccount } = useAuth();
   const { settings, updateSettings } = useData();
   const { colors } = useAppTheme();
   const [name, setName] = useState(user?.name ?? '');
@@ -100,6 +100,14 @@ export default function SettingsScreen() {
           </Txt>
         </Card>
       )}
+
+      <View style={{ gap: 10 }}>
+        {(canSupervise || children.length > 0) && (
+          <Button label="👨‍👩‍👧 Ma famille" onPress={() => router.navigate('/family')} />
+        )}
+        <Button variant="secondary" label="📝 Refaire le questionnaire" onPress={() => router.push('/welcome')} />
+        <Button variant="secondary" label="💡 Idées de routines" onPress={() => router.push('/templates')} />
+      </View>
 
       <Section title="👤 Mon profil">
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-end' }}>
@@ -272,7 +280,6 @@ export default function SettingsScreen() {
         <ErrorText message={pwError} />
         {pwMessage ? <Txt style={{ color: colors.success, fontWeight: '600' }}>{pwMessage}</Txt> : null}
         <Button variant="secondary" label="Changer le mot de passe" onPress={submitPassword} disabled={!pwCurrent || !pwNext} />
-        <Button variant="secondary" label="✨ Revoir l’accueil guidé" onPress={() => updateSettings({ onboarded: false }).then(() => router.navigate('/'))} />
         {!parent && (
           <View style={{ gap: 10, marginTop: 8 }}>
             <Txt style={{ fontWeight: '700', color: colors.danger }}>Supprimer mon compte</Txt>

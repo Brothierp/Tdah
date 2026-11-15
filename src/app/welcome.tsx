@@ -1,154 +1,141 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Screen, Segmented, ToggleRow, Txt } from '@/components/ui';
+import { Button, Card, Screen, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data';
-import { packsFor, packToInputs } from '@/lib/templates';
+import { ROUTINE_TABS, tabOf } from '@/lib/moments';
+import { buildRoutines, QUESTIONS, withoutDuplicates, type Answers } from '@/lib/questionnaire';
 import { useAppTheme } from '@/lib/useAppTheme';
 
-const STEPS = 3;
-
-/** Accueil guidé : 3 écrans courts, une seule question par écran, et on peut tout passer. */
+/**
+ * Premier lancement : quelques questions simples (une par écran, de gros boutons),
+ * puis les routines du matin, de la journée et du soir sont créées à partir des réponses.
+ * Peut être refait plus tard depuis les Réglages (sans créer de doublons).
+ */
 export default function Welcome() {
   const { user, canSupervise } = useAuth();
-  const { settings, updateSettings, addTasks } = useData();
-  const { colors, radius } = useAppTheme();
+  const { tasks, addTasks, updateSettings } = useData();
+  const { colors, radius, fontScale } = useAppTheme();
+  // 0 = bienvenue, 1..N = questions, N+1 = récapitulatif
   const [step, setStep] = useState(0);
-  const [packs, setPacks] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Answers>({});
   if (!user) return null;
 
-  const suggestions = packsFor(user.ageGroup).slice(0, 4);
+  const total = QUESTIONS.length + 2;
+  const question = step >= 1 && step <= QUESTIONS.length ? QUESTIONS[step - 1] : null;
+  const routines = withoutDuplicates(tasks, buildRoutines(answers, user.ageGroup));
 
-  const finish = async () => {
-    const chosen = suggestions.filter((p) => packs.includes(p.id));
-    if (chosen.length) await addTasks(chosen.flatMap(packToInputs));
+  const finish = async (withRoutines: boolean) => {
+    if (withRoutines && routines.length) await addTasks(routines);
     await updateSettings({ onboarded: true });
     router.replace('/');
   };
 
-  const next = () => (step < STEPS - 1 ? setStep(step + 1) : finish());
+  const answer = (value: string) => {
+    if (!question) return;
+    setAnswers((a) => ({ ...a, [question.id]: value }));
+    setStep(step + 1);
+  };
 
   return (
     <Screen>
       <View style={styles.top}>
-        <View style={styles.dots} accessibilityLabel={`Étape ${step + 1} sur ${STEPS}`}>
-          {Array.from({ length: STEPS }, (_, i) => (
+        <View style={styles.dots} accessibilityLabel={`Étape ${step + 1} sur ${total}`}>
+          {Array.from({ length: total }, (_, i) => (
             <View key={i} style={[styles.dot, { backgroundColor: i <= step ? colors.primary : colors.border }]} />
           ))}
         </View>
-        <Button label="Passer" variant="ghost" onPress={finish} style={{ paddingHorizontal: 8, minHeight: 40 }} />
+        {step > 0 ? (
+          <Button size="sm" variant="ghost" label="Retour" onPress={() => setStep(step - 1)} />
+        ) : (
+          <Button size="sm" variant="ghost" label="Passer" onPress={() => finish(false)} />
+        )}
       </View>
 
       {step === 0 && (
-        <View style={{ gap: 16 }}>
+        <View style={styles.center}>
           <Text style={styles.hero}>👋</Text>
           <Txt variant="title" style={{ textAlign: 'center' }}>
             Bienvenue {user.name} !
           </Txt>
-          <Txt variant="muted" style={{ textAlign: 'center' }}>
-            Focus t’aide à avancer, une chose à la fois.
+          <Txt variant="muted" style={{ textAlign: 'center', fontSize: 18 * fontScale }}>
+            Quelques questions rapides pour préparer tes routines du matin, de la journée et du soir.
           </Txt>
-          {[
-            ['🎯', 'Une tâche à la fois', 'Pas de liste qui fait peur : juste la prochaine chose à faire.'],
-            ['🪜', 'Des petites étapes', 'Les grosses tâches sont découpées en morceaux faciles.'],
-            ['⏳', 'Un timer visuel', 'Tu vois le temps passer, et on te prévient avant la fin.'],
-            ['🔔', 'Des rappels', 'Seulement si tu veux, au bon moment.'],
-          ].map(([emoji, title, text]) => (
-            <Card key={title} style={styles.feature}>
-              <Text style={{ fontSize: 32 }}>{emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Txt style={{ fontWeight: '700' }}>{title}</Txt>
-                <Txt variant="small">{text}</Txt>
-              </View>
-            </Card>
-          ))}
+          <Button label="Commencer" onPress={() => setStep(1)} style={{ alignSelf: 'stretch', marginTop: 12 }} />
         </View>
       )}
 
-      {step === 1 && (
-        <View style={{ gap: 16 }}>
-          <Txt variant="title">Ton confort</Txt>
-          <Txt variant="muted">Pour que l’écran soit agréable à lire.</Txt>
-          <Card style={{ gap: 12 }}>
-            <Txt style={{ fontWeight: '700' }}>Taille du texte</Txt>
-            <Segmented
-              value={settings.textSize}
-              onChange={(v) => updateSettings({ textSize: v })}
-              options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'grand', label: 'Grand' },
-                { value: 'tres-grand', label: 'Très grand' },
-              ]}
-            />
-            <Txt>Voici un exemple de texte.</Txt>
-          </Card>
-          <Card>
-            <ToggleRow
-              label="🌿 Mode calme"
-              description="Couleurs plus douces, pas d’animations ni de confettis."
-              value={settings.calmMode}
-              onValueChange={(v) => updateSettings({ calmMode: v })}
-            />
-            <ToggleRow
-              label="📳 Vibrations"
-              description="Une petite vibration quand une tâche est finie."
-              value={settings.hapticsEnabled}
-              onValueChange={(v) => updateSettings({ hapticsEnabled: v })}
-            />
-          </Card>
+      {question && (
+        <View style={styles.center}>
+          <Text style={styles.hero}>{question.emoji}</Text>
+          <Txt variant="title" style={{ textAlign: 'center' }}>
+            {question.text(user.ageGroup)}
+          </Txt>
+          <View style={{ alignSelf: 'stretch', gap: 12, marginTop: 12 }}>
+            {question.options.map((o) => {
+              const selected = answers[question.id] === o.value;
+              return (
+                <Pressable
+                  key={o.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => answer(o.value)}
+                  style={({ pressed }) => [
+                    styles.answer,
+                    {
+                      borderRadius: radius,
+                      backgroundColor: selected ? colors.primary : colors.card,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={{ fontSize: 19 * fontScale, fontWeight: '700', color: selected ? colors.primaryText : colors.text }}>
+                    {o.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       )}
 
-      {step === 2 && (
+      {step === total - 1 && (
         <View style={{ gap: 16 }}>
-          <Txt variant="title">Pour bien démarrer</Txt>
-          <Txt variant="muted">Choisis des routines toutes prêtes (ou aucune). Tu pourras les modifier.</Txt>
-          {suggestions.map((pack) => {
-            const selected = packs.includes(pack.id);
+          <Txt variant="title">Tes routines sont prêtes</Txt>
+          <Txt variant="muted">Tu pourras tout modifier ensuite.</Txt>
+          {ROUTINE_TABS.map((t) => {
+            const items = routines.filter((r) => tabOf(r.moment) === t.key);
+            if (items.length === 0) return null;
             return (
-              <Pressable
-                key={pack.id}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
-                onPress={() => setPacks((p) => (selected ? p.filter((x) => x !== pack.id) : [...p, pack.id]))}
-                style={[
-                  styles.choice,
-                  { borderRadius: radius, borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.card },
-                ]}
-              >
-                <Text style={{ fontSize: 34 }}>{pack.emoji}</Text>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Txt style={{ fontWeight: '700' }}>{pack.title}</Txt>
-                  <Txt variant="small">{pack.tasks.map((t) => t.emoji).join(' ')}</Txt>
-                </View>
-                <Text style={{ fontSize: 24 }}>{selected ? '✅' : '⬜'}</Text>
-              </Pressable>
+              <Card key={t.key} style={{ gap: 8 }}>
+                <Txt variant="label">
+                  {t.emoji} {t.title}
+                </Txt>
+                {items.map((r) => (
+                  <Txt key={r.title}>
+                    {r.emoji} {r.title}
+                  </Txt>
+                ))}
+              </Card>
             );
           })}
+          {routines.length === 0 && <Txt variant="muted">Tout est déjà dans tes routines.</Txt>}
           {canSupervise && (
-            <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}>
-              <Txt variant="small">
-                👨‍👩‍👧 Tu es parent ? L’onglet Famille te permet de créer le compte de ton enfant et de suivre sa journée.
-              </Txt>
-            </Card>
+            <Txt variant="small">👨‍👩‍👧 Tu es parent ? Dans les Réglages, « Ma famille » permet de créer le compte de ton enfant.</Txt>
           )}
+          <Button label="C’est parti ! 🚀" onPress={() => finish(true)} />
         </View>
       )}
-
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {step > 0 && <Button label="Retour" variant="secondary" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />}
-        <Button label={step < STEPS - 1 ? 'Suivant' : 'C’est parti ! 🚀'} onPress={next} style={{ flex: 2 }} />
-      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dots: { flexDirection: 'row', gap: 8 },
-  dot: { width: 28, height: 8, borderRadius: 4 },
+  dots: { flexDirection: 'row', gap: 6, flexShrink: 1 },
+  dot: { width: 18, height: 6, borderRadius: 3 },
+  center: { alignItems: 'center', gap: 14, paddingTop: 24 },
   hero: { fontSize: 72, textAlign: 'center' },
-  feature: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderWidth: 2 },
+  answer: { minHeight: 64, paddingHorizontal: 20, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
 });

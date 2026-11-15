@@ -60,8 +60,7 @@ export default function FamilyScreen() {
   );
 
   return (
-    <Screen>
-      <Txt variant="title">Famille</Txt>
+    <Screen edges={['bottom']}>
       <Txt variant="muted">
         Suis la journée de tes enfants, ajoute-leur des tâches et des rappels. Ils voient que leur compte est suivi.
       </Txt>

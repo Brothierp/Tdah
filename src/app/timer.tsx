@@ -29,8 +29,7 @@ export default function TimerScreen() {
   if (timer.status === 'idle') {
     const suggestions = upcomingTasks(tasks).slice(0, 3);
     return (
-      <Screen>
-        <Txt variant="title">Timer</Txt>
+      <Screen edges={['bottom']}>
         <Txt variant="muted">{playful ? 'Touche une durée, et c’est parti ! 🏁' : 'Touche une durée : le timer démarre tout de suite.'}</Txt>
 
         <View style={{ gap: 10 }}>
@@ -97,8 +96,7 @@ export default function TimerScreen() {
   const ringColor = finished ? colors.success : timer.warning ? colors.warning : undefined;
 
   return (
-    <Screen>
-      <Txt variant="title">Timer</Txt>
+    <Screen edges={['bottom']}>
       {timer.label ? (
         <Txt variant="subtitle" style={{ textAlign: 'center' }}>
           {timer.label}

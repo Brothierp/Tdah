@@ -64,3 +64,39 @@ export function groupByMoment(tasks: Task[]): MomentGroup[] {
   }
   return groups.filter((g) => g.tasks.length > 0);
 }
+
+/**
+ * Les 3 onglets de l'app : une journée découpée simplement.
+ * « Journée » regroupe midi, après-midi et les tâches sans moment précis.
+ */
+export type RoutineTab = 'matin' | 'journee' | 'soir';
+
+export const ROUTINE_TABS: {
+  key: RoutineTab;
+  title: string;
+  short: string;
+  emoji: string;
+  /** Moment enregistré pour une tâche créée depuis cet onglet. */
+  moment: Moment | null;
+}[] = [
+  { key: 'matin', title: 'Routine du matin', short: 'Matin', emoji: '☀️', moment: 'matin' },
+  { key: 'journee', title: 'Dans la journée', short: 'Journée', emoji: '🌤️', moment: null },
+  { key: 'soir', title: 'Routine du soir', short: 'Soir', emoji: '🌙', moment: 'soir' },
+];
+
+export function tabOf(moment: Moment | null | undefined): RoutineTab {
+  return moment === 'matin' ? 'matin' : moment === 'soir' ? 'soir' : 'journee';
+}
+
+export function tabInfo(key: RoutineTab) {
+  return ROUTINE_TABS.find((t) => t.key === key)!;
+}
+
+/** L'onglet à ouvrir maintenant : matin avant 11 h, soir à partir de 18 h, sinon journée. */
+export function currentTab(now = new Date()): RoutineTab {
+  return tabOf(currentMoment(now));
+}
+
+export function tasksOfTab(tasks: Task[], key: RoutineTab): Task[] {
+  return tasks.filter((t) => tabOf(t.moment) === key);
+}
