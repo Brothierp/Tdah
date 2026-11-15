@@ -1,65 +1,87 @@
 import { useColorScheme } from 'react-native';
 import type { AgeGroup } from './types';
 
+/**
+ * Palette pastel douce, pensée pour apaiser : fonds clairs légèrement teintés,
+ * couleurs de remplissage pastel avec un texte foncé dessus (doux mais lisible).
+ *
+ *  - primary      : couleur d'accent pour le TEXTE, les liens et les icônes (assez foncée pour être lisible)
+ *  - primaryFill  : fond pastel des boutons principaux, avec `onFill` comme couleur de texte
+ *  - successFill  : fond pastel du bouton « Fait »
+ *  - tints        : fond très léger de chaque moment (matin pêche, journée menthe, soir lavande)
+ */
 const light = {
-  background: '#F7F5FF',
+  background: '#F8F7FB',
   card: '#FFFFFF',
-  text: '#1E1B2E',
-  textMuted: '#6B6880',
-  primary: '#6C5CE7',
-  primaryText: '#FFFFFF',
-  primarySoft: '#E9E5FF',
-  success: '#00B894',
-  successSoft: '#D5F5EC',
-  warning: '#FDCB6E',
-  danger: '#E05656',
-  border: '#E3E0F0',
+  text: '#34344A',
+  textMuted: '#77768A',
+  primary: '#5B67B8',
+  primaryText: '#2A2D52',
+  primarySoft: '#ECEEFB',
+  primaryFill: '#C3CAF5',
+  onFill: '#2A2D52',
+  success: '#7CC4A2',
+  successSoft: '#E5F4EC',
+  successFill: '#BFE6D2',
+  warning: '#F6D7A7',
+  danger: '#B85C5A',
+  dangerSoft: '#F8E1E0',
+  border: '#E8E6F0',
+  tintMatin: '#FDF3E7',
+  tintJournee: '#EDF7F2',
+  tintSoir: '#F1EEFA',
 };
 
 const dark: typeof light = {
-  background: '#14121F',
-  card: '#221F33',
-  text: '#F3F1FF',
-  textMuted: '#A9A5C2',
-  primary: '#8E80FF',
-  primaryText: '#14121F',
-  primarySoft: '#2F2A4F',
-  success: '#2ED3A6',
-  successSoft: '#163A32',
-  warning: '#FDCB6E',
-  danger: '#FF7A7A',
-  border: '#36324D',
+  background: '#1D1C26',
+  card: '#282736',
+  text: '#ECEAF5',
+  textMuted: '#A6A4BA',
+  primary: '#B5BEF5',
+  primaryText: '#1D1C26',
+  primarySoft: '#33354F',
+  primaryFill: '#AEB8EF',
+  onFill: '#1D1C26',
+  success: '#8FD0B1',
+  successSoft: '#22352D',
+  successFill: '#9ED8BC',
+  warning: '#E8C994',
+  danger: '#EBA3A0',
+  dangerSoft: '#3D2A2C',
+  border: '#393849',
+  tintMatin: '#29251F',
+  tintJournee: '#1F2925',
+  tintSoir: '#25232F',
 };
 
-/** Mode calme : couleurs moins saturées, contrastes doux (confort sensoriel, TSA). */
+/** Mode calme : encore moins de couleur (gris doux), pour les jours de surcharge sensorielle. */
 const calmLight: typeof light = {
-  background: '#F5F4F0',
-  card: '#FFFFFF',
-  text: '#2B2A33',
-  textMuted: '#6E6D78',
-  primary: '#56679A',
-  primaryText: '#FFFFFF',
-  primarySoft: '#E5E8F1',
-  success: '#4F8F74',
-  successSoft: '#E1EEE7',
-  warning: '#D9B66A',
-  danger: '#B5524F',
-  border: '#E2E0DA',
+  ...light,
+  background: '#F6F6F4',
+  text: '#3A3A40',
+  textMuted: '#7A7A80',
+  primary: '#5E6A8A',
+  primarySoft: '#ECEEF2',
+  primaryFill: '#D3D9E6',
+  onFill: '#2E3240',
+  success: '#86AE9B',
+  successSoft: '#E8F0EC',
+  successFill: '#D2E4DA',
+  tintMatin: '#F7F4EF',
+  tintJournee: '#F1F5F3',
+  tintSoir: '#F3F2F6',
 };
 
 const calmDark: typeof light = {
-  background: '#1A1A1E',
-  card: '#25252B',
-  text: '#ECEBE6',
-  textMuted: '#A7A6AE',
-  primary: '#9AA8D6',
-  primaryText: '#1A1A1E',
-  primarySoft: '#33384A',
-  success: '#7DBB9F',
-  successSoft: '#24352D',
-  warning: '#D9B66A',
-  danger: '#E08B88',
-  border: '#3A3A42',
+  ...dark,
+  background: '#1C1C20',
+  card: '#26262C',
+  primary: '#AAB4CC',
+  primaryFill: '#9AA4BC',
+  successFill: '#93B8A6',
+  tintMatin: '#24221F',
+  tintJournee: '#1F2422',
+  tintSoir: '#222128',
 };
 
 export type Colors = typeof light;

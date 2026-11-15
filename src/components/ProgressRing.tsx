@@ -30,7 +30,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={color ?? colors.primary}
+          stroke={color ?? colors.primaryFill}
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"

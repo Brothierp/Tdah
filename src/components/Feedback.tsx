@@ -63,10 +63,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           accessibilityLiveRegion="polite"
           style={[
             styles.toast,
-            { bottom: insets.bottom + 80, backgroundColor: colors.text, borderRadius: radius },
+            { bottom: insets.bottom + 80, backgroundColor: colors.primaryFill, borderRadius: radius },
           ]}
         >
-          <Text style={[styles.toastText, { color: colors.background }]}>{current.message}</Text>
+          <Text style={[styles.toastText, { color: colors.onFill }]}>{current.message}</Text>
           {current.undo && (
             <Pressable
               accessibilityRole="button"
@@ -76,9 +76,9 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                 current.undo?.();
                 setCurrent(null);
               }}
-              style={[styles.undo, { borderColor: colors.background }]}
+              style={[styles.undo, { borderColor: colors.onFill }]}
             >
-              <Text style={[styles.undoText, { color: colors.background }]}>Annuler</Text>
+              <Text style={[styles.undoText, { color: colors.onFill }]}>Annuler</Text>
             </Pressable>
           )}
         </View>

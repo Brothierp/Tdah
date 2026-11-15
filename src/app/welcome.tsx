@@ -85,12 +85,12 @@ export default function Welcome() {
                     styles.answer,
                     {
                       borderRadius: radius,
-                      backgroundColor: selected ? colors.primary : colors.card,
+                      backgroundColor: selected ? colors.primaryFill : colors.card,
                       opacity: pressed ? 0.8 : 1,
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 19 * fontScale, fontWeight: '700', color: selected ? colors.primaryText : colors.text }}>
+                  <Text style={{ fontSize: 19 * fontScale, fontWeight: '700', color: selected ? colors.onFill : colors.text }}>
                     {o.label}
                   </Text>
                 </Pressable>

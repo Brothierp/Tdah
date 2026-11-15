@@ -21,8 +21,11 @@ export function Screen({
   scroll = true,
   edges = ['top'],
   onRefresh,
+  background,
 }: {
   children: ReactNode;
+  /** Fond de l'écran (par défaut : fond du thème). */
+  background?: string;
   scroll?: boolean;
   edges?: ('top' | 'bottom')[];
   /** Active « tirer pour actualiser ». */
@@ -43,7 +46,7 @@ export function Screen({
     />
   ) : undefined;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={edges}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: background ?? colors.background }} edges={edges}>
       {scroll ? (
         <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
           {children}
@@ -115,10 +118,10 @@ export function Button({
   const { colors, radius, fontScale } = useAppTheme();
   const small = size === 'sm';
   const palette = {
-    primary: { bg: colors.primary, fg: colors.primaryText },
+    primary: { bg: colors.primaryFill, fg: colors.onFill },
     secondary: { bg: colors.primarySoft, fg: colors.primary },
-    success: { bg: colors.success, fg: '#FFFFFF' },
-    danger: { bg: colors.danger, fg: '#FFFFFF' },
+    success: { bg: colors.successFill, fg: colors.onFill },
+    danger: { bg: colors.dangerSoft, fg: colors.danger },
     ghost: { bg: 'transparent', fg: colors.primary },
   }[variant];
   return (
@@ -204,10 +207,10 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       onPress={onPress}
       style={[
         styles.chip,
-        { backgroundColor: selected ? colors.primary : colors.card, borderColor: selected ? colors.primary : colors.border },
+        { backgroundColor: selected ? colors.primaryFill : colors.card, borderColor: selected ? colors.primaryFill : colors.border },
       ]}
     >
-      <Text style={{ color: selected ? colors.primaryText : colors.text, fontWeight: selected ? '700' : '600', fontSize: 15 * fontScale }}>{label}</Text>
+      <Text style={{ color: selected ? colors.onFill : colors.text, fontWeight: selected ? '700' : '600', fontSize: 15 * fontScale }}>{label}</Text>
     </Pressable>
   );
 }
@@ -404,7 +407,7 @@ export function Fab({ onPress, accessibilityLabel }: { onPress: () => void; acce
       style={({ pressed }) => [
         styles.fab,
         {
-          backgroundColor: colors.primary,
+          backgroundColor: colors.primaryFill,
           opacity: pressed ? 0.85 : 1,
           shadowColor: '#000',
           shadowOpacity: 0.18,
@@ -414,7 +417,7 @@ export function Fab({ onPress, accessibilityLabel }: { onPress: () => void; acce
         },
       ]}
     >
-      <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '600', marginTop: -2 }}>+</Text>
+      <Text style={{ color: colors.onFill, fontSize: 34, fontWeight: '600', marginTop: -2 }}>+</Text>
     </Pressable>
   );
 }

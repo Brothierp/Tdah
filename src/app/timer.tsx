@@ -105,7 +105,7 @@ export default function TimerScreen() {
 
       {timer.warning && (
         <Card style={{ backgroundColor: colors.warning, borderColor: colors.warning }}>
-          <Txt style={{ fontWeight: '800', textAlign: 'center', color: '#1E1B2E' }}>⏳ Plus qu’une minute : prépare-toi à finir.</Txt>
+          <Txt style={{ fontWeight: '800', textAlign: 'center', color: colors.onFill }}>⏳ Plus qu’une minute : prépare-toi à finir.</Txt>
         </Card>
       )}
 

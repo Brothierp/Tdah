@@ -26,14 +26,16 @@ export function RoutineScreen({ tab }: { tab: RoutineTab }) {
   if (!user) return null;
 
   const info = tabInfo(tab);
+  // Chaque moment a sa couleur douce : on sait d'un coup d'œil où on est.
+  const tint = { matin: colors.tintMatin, journee: colors.tintJournee, soir: colors.tintSoir }[tab];
   const mine = tasksOfTab(tasks, tab);
   const [now, ...later] = mine.filter((t) => !t.done);
   const done = mine.filter((t) => t.done);
   const timerActive = timer.status === 'running' || timer.status === 'paused';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Screen onRefresh={refresh}>
+    <View style={{ flex: 1, backgroundColor: tint }}>
+      <Screen onRefresh={refresh} background={tint}>
         <View style={styles.header}>
           <View style={{ flex: 1, gap: 2 }}>
             <Txt variant="title">
@@ -59,11 +61,11 @@ export function RoutineScreen({ tab }: { tab: RoutineTab }) {
 
         {timerActive && (
           <Pressable onPress={() => router.navigate('/timer')} accessibilityRole="button" accessibilityLabel="Voir le timer en cours">
-            <Card style={[styles.timerBanner, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.timerText, { color: colors.primaryText, flex: 1 }]} numberOfLines={1}>
+            <Card style={[styles.timerBanner, { backgroundColor: colors.primaryFill }]}>
+              <Text style={[styles.timerText, { color: colors.onFill, flex: 1 }]} numberOfLines={1}>
                 ⏳ {timer.label || 'Timer'}
               </Text>
-              <Text style={[styles.timerText, { color: colors.primaryText, fontVariant: ['tabular-nums'] }]}>
+              <Text style={[styles.timerText, { color: colors.onFill, fontVariant: ['tabular-nums'] }]}>
                 {timer.status === 'paused' ? 'pause' : formatDuration(timer.remainingSec)}
               </Text>
             </Card>

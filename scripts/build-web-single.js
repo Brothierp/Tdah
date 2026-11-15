@@ -22,9 +22,9 @@ js = js.replace(/<\/script/gi, '<\\/script');
 const html = `<title>Focus</title>
 <meta name="description" content="Focus : tâches, timer et rappels pour les personnes TDAH et TSA.">
 <style>
-  :root { --bg: #F7F5FF; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14121F; color-scheme: dark; } }
-  :root[data-theme="dark"] { --bg: #14121F; color-scheme: dark; }
+  :root { --bg: #F8F7FB; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1D1C26; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #1D1C26; color-scheme: dark; }
   html { box-sizing: border-box; height: 100%; }
   body { height: 100%; overflow: hidden; background: var(--bg); }
   #root { display: flex; height: 100%; flex: 1; }
